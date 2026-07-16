@@ -20,7 +20,7 @@ function RemapBar({
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<NseSearchResult[]>([])
   const [showDrop, setShowDrop] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const doSearch = useCallback(async (q: string) => {

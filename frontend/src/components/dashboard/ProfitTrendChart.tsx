@@ -11,7 +11,8 @@ import {
 } from "recharts"
 import type { ProfitTrend } from "@/lib/api"
 
-function CustomTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function CustomTooltip(props: TooltipProps<number, string>) {
+  const { active, payload, label } = props as { active?: boolean; payload?: Array<{ value?: unknown }>; label?: string }
   if (!active || !payload?.length) return null
   const value = payload[0].value as number
   const isProfit = value >= 0

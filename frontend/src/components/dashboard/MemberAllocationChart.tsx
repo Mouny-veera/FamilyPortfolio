@@ -10,7 +10,8 @@ import type { DashboardMemberSnapshot } from "@/lib/api"
 
 const COLORS = ["#10B981", "#6366F1", "#F59E0B", "#EC4899", "#3B82F6"]
 
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+function CustomTooltip(props: TooltipProps<number, string>) {
+  const { active, payload } = props as { active?: boolean; payload?: Array<{ name?: string; value?: unknown; payload?: { pct: number } }> }
   if (!active || !payload?.length) return null
   const { name, value, payload: data } = payload[0]
   return (
@@ -29,7 +30,7 @@ function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
         {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value as number)}
       </p>
       <p className="text-[10px] font-mono tabular-nums mt-0.5" style={{ color: "var(--text-muted)" }}>
-        {data.pct.toFixed(1)}% of total
+        {data?.pct.toFixed(1)}% of total
       </p>
     </div>
   )
