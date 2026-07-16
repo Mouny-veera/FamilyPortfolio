@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from .auth import require_auth
 from .database import init_db, async_session
 from .models import Member
 from .routers import members, holdings, dashboard, scanner, settings, nse, alerts
@@ -38,14 +39,19 @@ async def lifespan(app: FastAPI):
     stop_polling()
 
 
-app = FastAPI(title="Family Portfolio Scanner", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="Family Portfolio Scanner",
+    version="1.0.0",
+    lifespan=lifespan,
+    dependencies=[Depends(require_auth)],
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 app.include_router(members.router)

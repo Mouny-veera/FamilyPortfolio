@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..auth import scanner_limiter
 from ..database import get_db
 from ..models import ScanResult
 from ..schemas import ScanResultOut
@@ -19,6 +20,7 @@ async def get_scan_results(db: AsyncSession = Depends(get_db)):
 
 @router.post("/run")
 async def run_scanner(db: AsyncSession = Depends(get_db)):
+    scanner_limiter.check()
     from ..scanner.engine import run_scan
     try:
         results = await run_scan()
