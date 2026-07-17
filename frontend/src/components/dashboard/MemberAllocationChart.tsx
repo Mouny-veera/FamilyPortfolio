@@ -8,6 +8,8 @@ import {
 } from "recharts"
 import type { DashboardMemberSnapshot } from "@/lib/api"
 
+const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+
 const COLORS = ["#10B981", "#6366F1", "#F59E0B", "#EC4899", "#3B82F6"]
 
 function CustomTooltip(props: TooltipProps<number, string>) {
@@ -73,7 +75,7 @@ export function MemberAllocationChart({ members }: Props) {
               outerRadius={80}
               paddingAngle={3}
               dataKey="value"
-              animationDuration={800}
+              animationDuration={prefersReducedMotion ? 0 : 800}
               animationEasing="ease-out"
               stroke="none"
             >

@@ -87,8 +87,26 @@ export function HoldingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-5 h-5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+      <div className="animate-page-enter">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-7 w-28 rounded-md" style={{ backgroundColor: "var(--bg-elevated)" }} />
+          <div className="h-9 w-24 rounded-lg" style={{ backgroundColor: "var(--bg-elevated)" }} />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-xl px-5 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
+              <div className="h-3 w-16 rounded mb-3" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="h-6 w-24 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+            </div>
+          ))}
+        </div>
+        <div className="h-10 rounded-lg mb-5" style={{ backgroundColor: "var(--bg-secondary)" }} />
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-xl mb-3 px-4 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
+            <div className="h-5 w-32 rounded mb-2" style={{ backgroundColor: "var(--bg-elevated)" }} />
+            <div className="h-4 w-48 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+          </div>
+        ))}
       </div>
     )
   }
@@ -159,6 +177,7 @@ export function HoldingsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter by ticker..."
+          aria-label="Filter holdings by ticker"
           className="w-full pl-9 pr-8 py-2 rounded-lg text-[13px] bg-transparent outline-none transition-all duration-150"
           style={{
             border: "1px solid var(--border-color)",
@@ -168,7 +187,8 @@ export function HoldingsPage() {
         {search && (
           <button
             onClick={() => setSearch("")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded cursor-pointer hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
+            aria-label="Clear filter"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg cursor-pointer hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
           >
             <X size={14} strokeWidth={2} style={{ color: "var(--text-muted)" }} />
           </button>

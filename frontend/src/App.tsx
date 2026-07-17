@@ -62,10 +62,17 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium focus:text-white"
+          style={{ background: "var(--color-accent, #10B981)" }}
+        >
+          Skip to main content
+        </a>
         <Sidebar mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopBar lastRefresh={lastRefresh} onMenuToggle={() => setSidebarOpen(true)} />
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6">
             <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/holdings/:memberId" element={<HoldingsPage />} />

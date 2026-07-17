@@ -35,8 +35,29 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-5 h-5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+      <div className="animate-page-enter">
+        <div className="h-7 w-32 rounded-md mb-6" style={{ backgroundColor: "var(--bg-elevated)" }} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-xl px-5 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
+              <div className="h-3 w-20 rounded mb-3" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="h-6 w-28 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border-color)" }}>
+          <div className="px-5 py-3" style={{ backgroundColor: "var(--bg-elevated)" }}>
+            <div className="h-4 w-32 rounded" style={{ backgroundColor: "var(--border-color)" }} />
+          </div>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3.5" style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}>
+              <div className="h-4 w-24 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="flex-1" />
+              <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -63,7 +84,7 @@ export function DashboardPage() {
       icon: Wallet,
       gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 60%)",
       borderAccent: "rgba(16, 185, 129, 0.15)",
-      iconColor: "#10B981",
+      iconColor: "var(--color-profit)",
     },
     {
       label: "Current Value",
@@ -71,7 +92,7 @@ export function DashboardPage() {
       icon: BarChart3,
       gradient: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 60%)",
       borderAccent: "rgba(99, 102, 241, 0.15)",
-      iconColor: "#6366F1",
+      iconColor: "var(--color-info)",
     },
     {
       label: "Total P/L",
@@ -85,7 +106,7 @@ export function DashboardPage() {
       borderAccent: data.total_pnl != null && data.total_pnl >= 0
         ? "rgba(16, 185, 129, 0.15)"
         : "rgba(244, 63, 94, 0.15)",
-      iconColor: data.total_pnl != null && data.total_pnl >= 0 ? "#10B981" : "#F43F5E",
+      iconColor: data.total_pnl != null && data.total_pnl >= 0 ? "var(--color-profit)" : "var(--color-loss)",
     },
     {
       label: "Active Alerts",
@@ -94,7 +115,7 @@ export function DashboardPage() {
       icon: AlertTriangle,
       gradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0) 60%)",
       borderAccent: "rgba(245, 158, 11, 0.12)",
-      iconColor: "#F59E0B",
+      iconColor: "var(--color-warning)",
     },
   ]
 
@@ -168,9 +189,12 @@ export function DashboardPage() {
               {data.members.map((m, i) => (
                 <tr
                   key={m.member.id}
-                  className="group cursor-pointer transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+                  className="group cursor-pointer transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2"
                   style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+                  tabIndex={0}
+                  role="link"
                   onClick={() => navigate(`/holdings/${m.member.id}`)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/holdings/${m.member.id}`) } }}
                 >
                   <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{m.member.name}</td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(m.invested)}</td>
@@ -197,7 +221,7 @@ export function DashboardPage() {
                     <ChevronRight
                       size={14}
                       strokeWidth={1.5}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                      className="opacity-50 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150"
                       style={{ color: "var(--text-muted)" }}
                     />
                   </td>

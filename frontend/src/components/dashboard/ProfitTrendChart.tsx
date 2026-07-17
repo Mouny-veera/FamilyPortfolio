@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import {
   BarChart,
   Bar,
@@ -10,6 +11,8 @@ import {
   type TooltipProps,
 } from "recharts"
 import type { ProfitTrend } from "@/lib/api"
+
+const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
 function CustomTooltip(props: TooltipProps<number, string>) {
   const { active, payload, label } = props as { active?: boolean; payload?: Array<{ value?: unknown }>; label?: string }
@@ -71,7 +74,7 @@ export function ProfitTrendChart({ data }: { data: ProfitTrend[] }) {
           }
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--bg-elevated)", opacity: 0.4 }} />
-        <Bar dataKey="total_pnl" radius={[8, 8, 0, 0]} maxBarSize={52} animationDuration={800} animationEasing="ease-out">
+        <Bar dataKey="total_pnl" radius={[8, 8, 0, 0]} maxBarSize={52} animationDuration={prefersReducedMotion ? 0 : 800} animationEasing="ease-out">
           {data.map((entry, index) => (
             <Cell
               key={`cell-${index}`}

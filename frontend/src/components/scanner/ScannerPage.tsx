@@ -127,7 +127,7 @@ export function ScannerPage() {
                     >
                       <td className="px-5 py-2.5 font-mono text-[11px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
                       <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
-                      <td className="px-5 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap" style={{ color: "#10B981" }}>
+                      <td className="px-5 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap" style={{ color: "var(--color-profit)" }}>
                         {r.score.toFixed(1)}
                       </td>
                       <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
