@@ -4,10 +4,9 @@ import secrets
 import time
 from pathlib import Path
 
+import httpx
 import jwt
 from fastapi import APIRouter, HTTPException
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -72,13 +71,19 @@ async def google_login(body: GoogleLoginRequest):
         raise HTTPException(500, "Google OAuth not configured. Set GOOGLE_CLIENT_ID in .env")
 
     try:
-        idinfo = id_token.verify_oauth2_token(
-            body.credential,
-            google_requests.Request(),
-            GOOGLE_CLIENT_ID,
-        )
-    except ValueError:
-        raise HTTPException(401, "Invalid Google token")
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": body.credential},
+                timeout=10,
+            )
+        if resp.status_code != 200:
+            raise HTTPException(401, "Invalid Google token")
+        idinfo = resp.json()
+        if idinfo.get("aud") != GOOGLE_CLIENT_ID:
+            raise HTTPException(401, "Token audience mismatch")
+    except httpx.HTTPError:
+        raise HTTPException(502, "Failed to verify token with Google")
 
     email = idinfo.get("email", "").lower()
     name = idinfo.get("name", "")
