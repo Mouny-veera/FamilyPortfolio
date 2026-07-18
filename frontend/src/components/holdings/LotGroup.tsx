@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react"
-import { ChevronRight, TrendingUp, CheckCircle2, AlertTriangle, Search } from "lucide-react"
+import { ChevronRight, TrendingUp, CheckCircle2, AlertTriangle, Search, Trash2 } from "lucide-react"
 import type { LotGroup as LotGroupType, NseSearchResult } from "@/lib/api"
 import { api } from "@/lib/api"
 import { cn, formatCurrency, formatNumber, formatDate, formatPct } from "@/lib/utils"
+import { EditForm } from "./EditForm"
 import { SellForm } from "./SellForm"
 import { SellGroupForm } from "./SellGroupForm"
+import { DeleteConfirm } from "./DeleteConfirm"
 
 const ALERT_THRESHOLD = 10
 
@@ -62,7 +64,7 @@ function RemapBar({
           key={s.symbol}
           onClick={() => onRemap(s.symbol)}
           disabled={remapping}
-          className="text-[11px] px-2.5 py-1 rounded-md font-medium cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-50"
+          className="text-[11px] px-2.5 py-1 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             backgroundColor: "var(--bg-card)",
             border: "1px solid var(--border-color)",
@@ -89,8 +91,9 @@ function RemapBar({
             onChange={(e) => handleChange(e.target.value)}
             onFocus={() => { if (results.length > 0) setShowDrop(true) }}
             placeholder="Search NSE symbol..."
+            aria-label="Search NSE symbol for remapping"
             disabled={remapping}
-            className="text-[11px] pl-7 pr-2 py-1 rounded-md bg-transparent outline-none w-40 disabled:opacity-50"
+            className="text-[11px] pl-7 pr-2 py-1.5 min-h-[44px] sm:min-h-0 rounded-md bg-transparent outline-none w-40 disabled:opacity-40"
             style={{
               border: "1px solid var(--border-color)",
               color: "var(--text-primary)",
@@ -111,7 +114,7 @@ function RemapBar({
                 key={r.symbol}
                 type="button"
                 onClick={() => { onRemap(r.symbol); setShowDrop(false); setQuery("") }}
-                className="w-full text-left px-3 py-2 cursor-pointer transition-colors duration-75 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+                className="w-full text-left px-3 py-2 min-h-[44px] sm:min-h-0 cursor-pointer transition-colors duration-75 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                 style={{ borderBottom: "1px solid var(--border-subtle)" }}
               >
                 <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -138,6 +141,8 @@ interface LotGroupProps {
 export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
   const [open, setOpen] = useState(true)
   const [sellingLotId, setSellingLotId] = useState<number | null>(null)
+  const [editingLotId, setEditingLotId] = useState<number | null>(null)
+  const [deletingLotId, setDeletingLotId] = useState<number | null>(null)
   const [sellingGroup, setSellingGroup] = useState(false)
   const [remapping, setRemapping] = useState(false)
 
@@ -174,6 +179,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
       >
         <button
           onClick={() => setOpen(!open)}
+          aria-expanded={open}
           className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0"
         >
           <ChevronRight
@@ -278,7 +284,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                 setSellingGroup(!sellingGroup)
                 setSellingLotId(null)
               }}
-              className="text-[11px] px-2.5 py-1.5 rounded-md font-medium cursor-pointer transition-all duration-200"
+              className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
               style={{
                 color: sellingGroup ? "white" : "var(--color-loss)",
                 backgroundColor: sellingGroup ? "var(--color-loss)" : "transparent",
@@ -303,6 +309,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
         <div className="flex items-center justify-between">
           <button
             onClick={() => setOpen(!open)}
+            aria-expanded={open}
             className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
           >
             <ChevronRight
@@ -334,7 +341,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
               setSellingGroup(!sellingGroup)
               setSellingLotId(null)
             }}
-            className="text-[11px] px-2.5 py-1.5 rounded-md font-medium cursor-pointer transition-all duration-200 shrink-0 ml-2"
+            className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200 shrink-0 ml-2"
             style={{
               color: sellingGroup ? "white" : "var(--color-loss)",
               backgroundColor: sellingGroup ? "var(--color-loss)" : "transparent",
@@ -446,25 +453,80 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                       <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>₹{formatNumber(lot.buy_rate)}</td>
                       <td className="px-4 py-2.5 text-right font-mono font-medium tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(lot.buy_value)}</td>
                       <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => setSellingLotId(sellingLotId === lot.id ? null : lot.id)}
-                          className="text-[11px] px-2.5 py-1.5 rounded-md font-medium cursor-pointer transition-all duration-200"
-                          style={{
-                            color: sellingLotId === lot.id ? "white" : "var(--color-loss)",
-                            backgroundColor: sellingLotId === lot.id ? "var(--color-loss)" : "transparent",
-                            border: `1px solid ${sellingLotId === lot.id ? "var(--color-loss)" : "rgba(244, 63, 94, 0.3)"}`,
-                          }}
-                        >
-                          {sellingLotId === lot.id ? "Cancel" : "Sell"}
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingLotId(editingLotId === lot.id ? null : lot.id)
+                              setSellingLotId(null)
+                              setDeletingLotId(null)
+                            }}
+                            aria-label={editingLotId === lot.id ? `Cancel editing ${group.ticker}` : `Edit ${group.ticker} lot ${i + 1}`}
+                            className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
+                            style={{
+                              color: editingLotId === lot.id ? "white" : "var(--color-accent)",
+                              backgroundColor: editingLotId === lot.id ? "var(--color-accent)" : "transparent",
+                              border: `1px solid ${editingLotId === lot.id ? "var(--color-accent)" : "rgba(16, 185, 129, 0.3)"}`,
+                            }}
+                          >
+                            {editingLotId === lot.id ? "Cancel" : "Edit"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSellingLotId(sellingLotId === lot.id ? null : lot.id)
+                              setEditingLotId(null)
+                              setDeletingLotId(null)
+                            }}
+                            aria-label={sellingLotId === lot.id ? `Cancel selling ${group.ticker}` : `Sell ${group.ticker} lot ${i + 1}`}
+                            className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
+                            style={{
+                              color: sellingLotId === lot.id ? "white" : "var(--color-loss)",
+                              backgroundColor: sellingLotId === lot.id ? "var(--color-loss)" : "transparent",
+                              border: `1px solid ${sellingLotId === lot.id ? "var(--color-loss)" : "rgba(244, 63, 94, 0.3)"}`,
+                            }}
+                          >
+                            {sellingLotId === lot.id ? "Cancel" : "Sell"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeletingLotId(deletingLotId === lot.id ? null : lot.id)
+                              setEditingLotId(null)
+                              setSellingLotId(null)
+                            }}
+                            aria-label={`Delete lot ${lot.lot_label}`}
+                            className="p-1.5 min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 flex items-center justify-center rounded-md cursor-pointer transition-all duration-200"
+                            style={{
+                              color: deletingLotId === lot.id ? "white" : "var(--text-muted)",
+                              backgroundColor: deletingLotId === lot.id ? "var(--color-loss)" : "transparent",
+                              border: `1px solid ${deletingLotId === lot.id ? "var(--color-loss)" : "var(--border-subtle)"}`,
+                            }}
+                          >
+                            <Trash2 size={13} strokeWidth={2} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
+                    {editingLotId === lot.id && (
+                      <EditForm
+                        key={`edit-${lot.id}`}
+                        lot={lot}
+                        onClose={() => setEditingLotId(null)}
+                        onSuccess={onRefresh}
+                      />
+                    )}
                     {sellingLotId === lot.id && (
                       <SellForm
                         key={`sell-${lot.id}`}
                         lot={lot}
                         defaultSellRate={group.current_price ?? undefined}
                         onClose={() => setSellingLotId(null)}
+                        onSuccess={onRefresh}
+                      />
+                    )}
+                    {deletingLotId === lot.id && (
+                      <DeleteConfirm
+                        key={`delete-${lot.id}`}
+                        lot={lot}
+                        onClose={() => setDeletingLotId(null)}
                         onSuccess={onRefresh}
                       />
                     )}

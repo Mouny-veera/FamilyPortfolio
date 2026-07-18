@@ -123,6 +123,16 @@ class YFinanceProvider(MarketDataProvider):
         return {"gainers": [], "losers": []}
 
 
+_yf_fallback = None
+
+
+def _get_yf_fallback() -> "YFinanceProvider":
+    global _yf_fallback
+    if _yf_fallback is None:
+        _yf_fallback = YFinanceProvider()
+    return _yf_fallback
+
+
 class FyersProvider(MarketDataProvider):
     def __init__(self, client_id: str, access_token: str):
         from fyers_apiv3 import fyersModel
@@ -136,7 +146,8 @@ class FyersProvider(MarketDataProvider):
         )
 
     def _fyers_symbol(self, ticker: str) -> str:
-        return f"NSE:{ticker}-EQ"
+        from .nse_master import get_fyers_symbol
+        return get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
 
     async def get_live_price(self, ticker: str) -> dict[str, float] | None:
         import asyncio
@@ -144,16 +155,16 @@ class FyersProvider(MarketDataProvider):
             data = {"symbols": self._fyers_symbol(ticker)}
             resp = await asyncio.to_thread(self._fyers.quotes, data=data)
             if resp.get("s") != "ok" or not resp.get("d"):
-                return None
+                return await _get_yf_fallback().get_live_price(ticker)
             q = resp["d"][0]["v"]
             lp = q.get("lp")
             if lp is None:
-                return None
+                return await _get_yf_fallback().get_live_price(ticker)
             chp = q.get("chp", 0)
             return {"last_price": round(float(lp), 2), "change_pct": round(float(chp), 2)}
         except Exception as e:
             print(f"Fyers live price error for {ticker}: {e}")
-            return None
+            return await _get_yf_fallback().get_live_price(ticker)
 
     async def get_historical_ohlc(
         self, ticker: str, start: date, end: date
@@ -171,18 +182,18 @@ class FyersProvider(MarketDataProvider):
             resp = await asyncio.to_thread(self._fyers.history, data=data)
             candles = resp.get("candles")
             if not candles:
-                return None
+                return await _get_yf_fallback().get_historical_ohlc(ticker, start, end)
             df = pd.DataFrame(candles, columns=["date", "open", "high", "low", "close", "volume"])
             df["date"] = pd.to_datetime(df["date"], unit="s" if isinstance(candles[0][0], (int, float)) else None)
             return df
         except Exception as e:
             print(f"Fyers historical OHLC error for {ticker}: {e}")
-            return None
+            return await _get_yf_fallback().get_historical_ohlc(ticker, start, end)
 
     async def get_bulk_prices(self, tickers: list[str]) -> dict[str, dict[str, float]]:
         import asyncio
+        import re
         result = {}
-        # Fyers quotes API supports up to 50 symbols per call
         for i in range(0, len(tickers), 50):
             batch = tickers[i:i + 50]
             symbols = ",".join(self._fyers_symbol(t) for t in batch)
@@ -194,8 +205,9 @@ class FyersProvider(MarketDataProvider):
                 for quote in resp["d"]:
                     v = quote.get("v", {})
                     sym_full = quote.get("n", "")
-                    # Extract ticker from "NSE:SBIN-EQ" format
-                    ticker_name = sym_full.replace("NSE:", "").replace("-EQ", "")
+                    # Extract ticker from "NSE:SBIN-EQ" or "NSE:FCSSOFT-BE"
+                    m = re.match(r"NSE:(.+)-\w+$", sym_full)
+                    ticker_name = m.group(1) if m else sym_full
                     lp = v.get("lp")
                     if lp is None:
                         continue
@@ -206,6 +218,14 @@ class FyersProvider(MarketDataProvider):
                     }
             except Exception as e:
                 print(f"Fyers bulk price error (batch {i}): {e}")
+
+        # yfinance fallback for tickers Fyers couldn't resolve
+        missing = [t for t in tickers if t not in result]
+        if missing:
+            print(f"Fyers missed {len(missing)} tickers, falling back to yfinance: {missing}")
+            yf_prices = await _get_yf_fallback().get_bulk_prices(missing)
+            result.update(yf_prices)
+
         return result
 
     async def get_nifty200_constituents(self) -> list[str]:

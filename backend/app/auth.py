@@ -1,3 +1,4 @@
+import hmac
 import os
 import time
 from collections import defaultdict
@@ -9,21 +10,44 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 load_dotenv()
 
 API_TOKEN = os.environ.get("API_TOKEN", "")
+GOOGLE_AUTH_ENABLED = bool(os.environ.get("GOOGLE_CLIENT_ID", ""))
+
+if not API_TOKEN and not GOOGLE_AUTH_ENABLED:
+    import warnings
+    warnings.warn(
+        "Neither API_TOKEN nor GOOGLE_CLIENT_ID is set — all endpoints are unauthenticated! "
+        "Set at least one in your .env file for production use.",
+        stacklevel=1,
+    )
 
 _bearer = HTTPBearer(auto_error=False)
+
+PUBLIC_PATHS = {"/api/health", "/api/auth/google"}
 
 
 async def require_auth(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ):
-    if not API_TOKEN:
+    if request.url.path in PUBLIC_PATHS:
         return
 
-    if credentials and credentials.credentials == API_TOKEN:
+    if not API_TOKEN and not GOOGLE_AUTH_ENABLED:
         return
 
-    raise HTTPException(status_code=401, detail="Invalid or missing API token")
+    if credentials:
+        # Try API_TOKEN first
+        if API_TOKEN and hmac.compare_digest(credentials.credentials, API_TOKEN):
+            return
+
+        # Try JWT session token
+        if GOOGLE_AUTH_ENABLED:
+            from .routers.google_auth import verify_session_token
+            payload = verify_session_token(credentials.credentials)
+            if payload:
+                return
+
+    raise HTTPException(status_code=401, detail="Invalid or missing authentication")
 
 
 class RateLimiter:

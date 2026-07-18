@@ -2,22 +2,22 @@ import { useEffect, useState, useCallback } from "react"
 import { api, type Dashboard } from "@/lib/api"
 import { formatCurrency, formatPct } from "@/lib/utils"
 import { useNavigate } from "react-router-dom"
-import { TrendingUp, Wallet, BarChart3, AlertTriangle, ChevronRight } from "lucide-react"
+import { TrendingUp, Wallet, BarChart3, AlertTriangle, ChevronRight, Settings, RefreshCw, WifiOff } from "lucide-react"
 
 export function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   const fetchData = useCallback(async () => {
     try {
       const dash = await api.getDashboard()
       setData(dash)
-      setError(false)
-    } catch (e) {
+      setError(null)
+    } catch (e: any) {
       console.error(e)
-      setError(true)
+      setError(e?.message || "Failed to load dashboard")
     } finally {
       setLoading(false)
     }
@@ -63,16 +63,49 @@ export function DashboardPage() {
   }
 
   if (error || !data) {
+    const isConnectionError = error === "Failed to fetch" || error === "NetworkError when attempting to fetch resource."
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>Failed to load dashboard</p>
-        <button
-          onClick={() => { setLoading(true); fetchData() }}
-          className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-white cursor-pointer"
-          style={{ background: "linear-gradient(135deg, #10B981 0%, #059669 100%)" }}
+      <div className="animate-page-enter flex flex-col items-center justify-center py-20 gap-4">
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 100%)",
+            border: "1px solid rgba(244, 63, 94, 0.15)",
+          }}
         >
-          Retry
-        </button>
+          <WifiOff size={22} strokeWidth={1.5} style={{ color: "var(--color-loss)" }} />
+        </div>
+        <div className="text-center max-w-sm">
+          <p role="alert" className="text-[14px] font-semibold tracking-tight mb-1" style={{ color: "var(--text-primary)" }}>
+            {isConnectionError ? "Backend not reachable" : "Failed to load dashboard"}
+          </p>
+          <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+            {isConnectionError
+              ? "The backend server isn't running. Start it and try again."
+              : "This could be due to an expired Fyers token. Try refreshing the token in Settings."}
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 mt-1">
+          <button
+            onClick={() => { setLoading(true); fetchData() }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150"
+            style={{ background: "var(--gradient-accent)" }}
+          >
+            <RefreshCw size={13} strokeWidth={2} />
+            Retry
+          </button>
+          <button
+            onClick={() => navigate("/settings")}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150"
+            style={{
+              color: "var(--text-secondary)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            <Settings size={13} strokeWidth={2} />
+            Go to Settings
+          </button>
+        </div>
       </div>
     )
   }
@@ -116,6 +149,7 @@ export function DashboardPage() {
       gradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0) 60%)",
       borderAccent: "rgba(245, 158, 11, 0.12)",
       iconColor: "var(--color-warning)",
+      href: "/alerts",
     },
   ]
 
@@ -126,39 +160,55 @@ export function DashboardPage() {
       </h1>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {metricCards.map((card, idx) => (
-          <div
-            key={card.label}
-            className={`animate-card-enter stagger-${idx + 1} rounded-xl px-3 sm:px-5 py-3 sm:py-4 transition-all duration-200`}
-            style={{
-              backgroundColor: "var(--bg-card)",
-              border: `1px solid ${card.borderAccent}`,
-              backgroundImage: card.gradient,
-              boxShadow: "var(--shadow-card)",
-            }}
-          >
-            <div className="flex items-center justify-between mb-2">
+        {metricCards.map((card, idx) => {
+          const content = (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-[0.08em]"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {card.label}
+                </p>
+                <card.icon size={14} strokeWidth={1.5} style={{ color: card.iconColor, opacity: 0.7 }} />
+              </div>
               <p
-                className="text-[10px] font-semibold uppercase tracking-[0.08em]"
-                style={{ color: "var(--text-muted)" }}
+                className={`text-[14px] sm:text-[22px] font-semibold tracking-tight ${card.isCount ? "" : "font-mono tabular-nums"}`}
+                style={{ color: card.color || "var(--text-primary)" }}
               >
-                {card.label}
+                {card.value}
               </p>
-              <card.icon size={14} strokeWidth={1.5} style={{ color: card.iconColor, opacity: 0.7 }} />
-            </div>
-            <p
-              className={`text-[14px] sm:text-[22px] font-semibold tracking-tight ${card.isCount ? "" : "font-mono tabular-nums"}`}
-              style={{ color: card.color || "var(--text-primary)" }}
+              {card.sub && (
+                <p className="text-sm font-mono mt-0.5 font-medium tabular-nums" style={{ color: card.color }}>
+                  {card.sub}
+                </p>
+              )}
+            </>
+          )
+
+          const className = `animate-card-enter stagger-${idx + 1} rounded-xl px-3 sm:px-5 py-3 sm:py-4 transition-all duration-200 ${card.href ? "cursor-pointer hover:brightness-110" : ""}`
+          const style = {
+            backgroundColor: "var(--bg-card)",
+            border: `1px solid ${card.borderAccent}`,
+            backgroundImage: card.gradient,
+            boxShadow: "var(--shadow-card)",
+          }
+
+          return card.href ? (
+            <button
+              key={card.label}
+              className={`${className} text-left`}
+              style={style}
+              onClick={() => navigate(card.href!)}
             >
-              {card.value}
-            </p>
-            {card.sub && (
-              <p className="text-sm font-mono mt-0.5 font-medium tabular-nums" style={{ color: card.color }}>
-                {card.sub}
-              </p>
-            )}
-          </div>
-        ))}
+              {content}
+            </button>
+          ) : (
+            <div key={card.label} className={className} style={style}>
+              {content}
+            </div>
+          )
+        })}
       </div>
 
       <div

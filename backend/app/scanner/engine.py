@@ -39,8 +39,9 @@ async def run_scan() -> list[dict]:
 
         provider = get_active_provider()
         end = date.today()
-        start = end - timedelta(days=90)
+        start = end - timedelta(days=180)
         results = []
+        errors = 0
 
         for strategy in STRATEGIES:
             for ticker in universe:
@@ -57,19 +58,28 @@ async def run_scan() -> list[dict]:
                             "metrics": scan_score.metrics,
                         })
                 except Exception as e:
+                    errors += 1
                     print(f"Scanner error for {ticker}: {e}")
                 await asyncio.sleep(0.5)
 
+        success_rate = (len(universe) - errors) / len(universe) if universe else 0
+        if success_rate < 0.5 and results:
+            print(f"Scan had {errors}/{len(universe)} failures ({success_rate:.0%} success) — keeping previous results")
+            return results
+        if not results and errors > 0:
+            print(f"Scan produced 0 results with {errors} errors — keeping previous results")
+            return []
+
         async with async_session() as db:
-            await db.execute(delete(ScanResult))
-            for r in results:
-                db.add(ScanResult(
-                    ticker=r["ticker"],
-                    score=r["score"],
-                    strategy_name=r["strategy_name"],
-                    metrics=r["metrics"],
-                    scanned_at=datetime.now(timezone.utc),
-                ))
-            await db.commit()
+            async with db.begin():
+                await db.execute(delete(ScanResult))
+                for r in results:
+                    db.add(ScanResult(
+                        ticker=r["ticker"],
+                        score=r["score"],
+                        strategy_name=r["strategy_name"],
+                        metrics=r["metrics"],
+                        scanned_at=datetime.now(timezone.utc),
+                    ))
 
         return results

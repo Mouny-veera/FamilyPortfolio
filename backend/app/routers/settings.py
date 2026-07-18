@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from ..services.price_service import refresh_prices
 from ..services.market_data import load_config, save_config, get_active_provider, FyersProvider
-from ..services.fyers_auth import generate_fyers_token
+from ..services.fyers_auth import generate_fyers_token, exchange_auth_code
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -21,11 +22,15 @@ class FyersLoginConfig(BaseModel):
 
 @router.get("/data-provider")
 async def get_data_provider():
+    import os
     config = load_config()
     fyers_cfg = config.get("fyers", {})
     provider = get_active_provider()
     active = "fyers" if isinstance(provider, FyersProvider) else "yfinance"
     auto_login = bool(fyers_cfg.get("totp_secret"))
+    app_id = os.environ.get("FYERS_APP_ID", "")
+    redirect_uri = os.environ.get("FYERS_REDIRECT_URI", "http://127.0.0.1:8901")
+    auth_url = f"https://api-t1.fyers.in/api/v3/generate-authcode?client_id={app_id}&redirect_uri={redirect_uri}&response_type=code&state=none" if app_id else ""
     return {
         "active": active,
         "fyers_configured": bool(fyers_cfg.get("client_id")),
@@ -34,6 +39,7 @@ async def get_data_provider():
         "auto_login": auto_login,
         "ticker_search_source": "Fyers Symbols Master",
         "scanner_universe": "Nifty 200 via Fyers API",
+        "auth_url": auth_url,
     }
 
 
@@ -67,9 +73,57 @@ async def setup_fyers_auto_login(cfg: FyersLoginConfig):
         }
 
 
+@router.get("/fyers/status")
+async def fyers_token_status():
+    config = load_config()
+    fyers_cfg = config.get("fyers", {})
+    if not fyers_cfg.get("client_id") or not fyers_cfg.get("access_token"):
+        return {"connected": False, "token_valid": False, "message": "Fyers not configured"}
+
+    try:
+        from fyers_apiv3 import fyersModel
+        import asyncio
+        fyers = fyersModel.FyersModel(
+            client_id=fyers_cfg["client_id"],
+            token=fyers_cfg["access_token"],
+            is_async=False,
+            log_path="",
+        )
+        resp = await asyncio.to_thread(fyers.get_profile)
+        if resp.get("s") == "ok":
+            return {
+                "connected": True,
+                "token_valid": True,
+                "fy_id": resp.get("data", {}).get("fy_id", fyers_cfg.get("fy_id", "")),
+                "message": "Token is valid",
+            }
+        else:
+            return {
+                "connected": True,
+                "token_valid": False,
+                "message": resp.get("message", "Token expired or invalid"),
+            }
+    except Exception as e:
+        return {
+            "connected": True,
+            "token_valid": False,
+            "message": f"Could not verify: {str(e)}",
+        }
+
+
 @router.post("/fyers/refresh-token")
 async def manual_token_refresh():
     result = await generate_fyers_token()
+    return result
+
+
+class ManualAuthCode(BaseModel):
+    auth_code: str
+
+
+@router.post("/fyers/manual-token")
+async def manual_token_from_auth_code(payload: ManualAuthCode):
+    result = await exchange_auth_code(payload.auth_code)
     return result
 
 

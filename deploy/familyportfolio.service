@@ -1,0 +1,16 @@
+[Unit]
+Description=Family Portfolio Backend (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/familyportfolio/backend
+EnvironmentFile=/opt/familyportfolio/.env
+ExecStart=/opt/familyportfolio/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

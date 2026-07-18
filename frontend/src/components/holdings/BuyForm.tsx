@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useId } from "react"
 import { X, Search, CheckCircle2, Loader2 } from "lucide-react"
 import { api, type NseSearchResult } from "@/lib/api"
 import { formatCurrency } from "@/lib/utils"
+import { FormError, SubmitButton } from "@/components/ui/form"
 
 interface BuyFormProps {
   memberId: number
@@ -45,6 +46,7 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const abortRef = useRef<AbortController | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const uid = useId()
 
   const buyValue = qty && rate ? (parseFloat(qty) * parseFloat(rate)).toFixed(2) : "0.00"
 
@@ -122,6 +124,8 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
     }
   }
 
+  const modalRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -131,11 +135,27 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
     }
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !modalRef.current) return
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus() }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
+    }
     document.addEventListener("mousedown", handleClick)
     document.addEventListener("keydown", handleEsc)
+    document.addEventListener("keydown", handleTab)
     return () => {
       document.removeEventListener("mousedown", handleClick)
       document.removeEventListener("keydown", handleEsc)
+      document.removeEventListener("keydown", handleTab)
     }
   }, [onClose])
 
@@ -178,8 +198,9 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
   const inputClasses = "w-full px-3 py-2 rounded-lg text-[13px] bg-transparent transition-all duration-150 outline-none"
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", backdropFilter: "blur(4px)" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", backdropFilter: "blur(4px)" }} role="dialog" aria-modal="true" aria-label="Add Buy">
       <div
+        ref={modalRef}
         className="rounded-xl w-full max-w-md mx-4 animate-slide-in"
         style={{
           backgroundColor: "var(--bg-card)",
@@ -194,6 +215,7 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
           <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>Add Buy</h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="p-1.5 rounded-lg cursor-pointer transition-colors duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
           >
             <X size={16} strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
@@ -202,7 +224,7 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div ref={dropdownRef} className="relative">
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
+            <label htmlFor={`${uid}-ticker`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
               Stock (NSE Symbol)
             </label>
             <div className="relative">
@@ -223,6 +245,7 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
               )}
               <input
                 ref={inputRef}
+                id={`${uid}-ticker`}
                 type="text"
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
@@ -231,6 +254,10 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
                 placeholder="Type to search e.g. RELIANCE, Infosys..."
                 required
                 autoComplete="off"
+                role="combobox"
+                aria-expanded={showDropdown}
+                aria-controls={`${uid}-listbox`}
+                aria-activedescendant={activeIndex >= 0 ? `${uid}-option-${activeIndex}` : undefined}
                 className={`${inputClasses} pl-8 pr-8`}
                 style={{
                   border: ticker ? "1px solid var(--color-profit)" : "1px solid var(--border-color)",
@@ -254,6 +281,8 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
 
             {showDropdown && (
               <div
+                id={`${uid}-listbox`}
+                role="listbox"
                 className="absolute z-10 w-full mt-1 rounded-lg overflow-hidden max-h-56 overflow-y-auto"
                 style={{
                   backgroundColor: "var(--bg-card)",
@@ -265,7 +294,10 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
                 {suggestions.map((s, i) => (
                   <button
                     key={s.symbol}
+                    id={`${uid}-option-${i}`}
                     type="button"
+                    role="option"
+                    aria-selected={i === activeIndex}
                     onClick={() => handleSelect(s)}
                     onMouseEnter={() => setActiveIndex(i)}
                     className="w-full text-left px-4 py-2.5 cursor-pointer transition-colors duration-75"
@@ -288,10 +320,11 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
+              <label htmlFor={`${uid}-date`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
                 Buy Date
               </label>
               <input
+                id={`${uid}-date`}
                 type="date"
                 value={buyDate}
                 onChange={(e) => setBuyDate(e.target.value)}
@@ -304,10 +337,11 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
+              <label htmlFor={`${uid}-qty`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
                 Quantity
               </label>
               <input
+                id={`${uid}-qty`}
                 type="number"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
@@ -325,10 +359,11 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
+              <label htmlFor={`${uid}-rate`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
                 Buy Rate (₹)
               </label>
               <input
+                id={`${uid}-rate`}
                 type="number"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
@@ -360,10 +395,11 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
+            <label htmlFor={`${uid}-notes`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1.5" style={{ color: "var(--text-muted)" }}>
               Notes (optional)
             </label>
             <input
+              id={`${uid}-notes`}
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -376,23 +412,9 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
             />
           </div>
 
-          {error && (
-            <p className="text-[12px] font-medium px-3 py-2 rounded-lg" style={{ color: "var(--color-loss)", backgroundColor: "rgba(244, 63, 94, 0.08)" }}>
-              {error}
-            </p>
-          )}
+          {error && <FormError message={error} />}
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full py-2.5 rounded-lg text-[13px] font-semibold text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-              boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
-            }}
-          >
-            {saving ? "Adding..." : "Add Buy"}
-          </button>
+          <SubmitButton loading={saving} label="Add Buy" loadingLabel="Adding..." fullWidth />
         </form>
       </div>
     </div>

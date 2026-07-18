@@ -1,14 +1,18 @@
 import { useState } from "react"
-import { RefreshCw, Sun, Moon, Menu } from "lucide-react"
+import { RefreshCw, Sun, Moon, Menu, LogOut } from "lucide-react"
 import { api } from "@/lib/api"
+import { useAuth } from "@/lib/auth"
 
 export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | null; onMenuToggle: () => void }) {
+  const { user, logout } = useAuth()
   const [refreshing, setRefreshing] = useState(false)
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false
     const stored = localStorage.getItem("theme")
-    if (stored) return stored === "dark"
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
+    const isDark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches
+    document.documentElement.classList.toggle("dark", isDark)
+    document.documentElement.classList.toggle("light", !isDark)
+    return isDark
   })
 
   const toggleTheme = () => {
@@ -62,7 +66,7 @@ export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | nu
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label="Refresh prices"
         >
           <RefreshCw
@@ -84,6 +88,17 @@ export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | nu
             <Moon size={16} strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
           )}
         </button>
+
+        {user && (
+          <button
+            onClick={logout}
+            className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95"
+            aria-label={`Sign out ${user.name}`}
+            title={user.email}
+          >
+            <LogOut size={16} strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
+          </button>
+        )}
       </div>
     </header>
   )

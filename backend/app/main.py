@@ -8,10 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from .auth import require_auth
 from .database import init_db, async_session
 from .models import Member
-from .routers import members, holdings, dashboard, scanner, settings, nse, alerts
+from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth
 from .services.price_service import start_polling, stop_polling
 from .services.nse_master import refresh_nse_master_list
 from .services.fyers_auth import ensure_valid_token
+from .services.fyers_callback import start_callback_server, stop_callback_server
 
 FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Mani", "Devi"]
 
@@ -32,11 +33,13 @@ async def lifespan(app: FastAPI):
     await seed_members()
     await ensure_valid_token()
     start_polling()
+    await start_callback_server()
     import asyncio
     nse_task = asyncio.create_task(refresh_nse_master_list())
     nse_task.add_done_callback(lambda t: t.exception() if not t.cancelled() and t.exception() else None)
     yield
     stop_polling()
+    await stop_callback_server()
 
 
 app = FastAPI(
@@ -61,6 +64,7 @@ app.include_router(scanner.router)
 app.include_router(settings.router)
 app.include_router(nse.router)
 app.include_router(alerts.router)
+app.include_router(google_auth.router)
 
 
 @app.get("/api/health")

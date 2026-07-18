@@ -4,6 +4,7 @@ import { api, type Alert } from "@/lib/api"
 import { formatCurrency, formatPct, formatNumber } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 import { SellGroupForm } from "@/components/holdings/SellGroupForm"
+import { PageError } from "@/components/ui/PageError"
 
 interface MemberGroup {
   memberId: number
@@ -30,7 +31,8 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
       {/* Parent row */}
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 cursor-pointer transition-colors duration-150"
+        aria-expanded={open}
+        className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 cursor-pointer transition-colors duration-150"
         style={{ backgroundColor: "var(--alert-row-bg)" }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -52,7 +54,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
           </span>
         </div>
 
-        <div className="flex items-center gap-6 text-right shrink-0">
+        <div className="flex items-center gap-3 sm:gap-6 text-right shrink-0 mt-2 sm:mt-0 pl-[30px] sm:pl-0">
           <div className="hidden sm:block">
             <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Invested</p>
             <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
@@ -87,11 +89,58 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
       {/* Child rows */}
       {open && (
         <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[800px]">
+          {/* Mobile/tablet card layout */}
+          <div className="lg:hidden" role="list" aria-label={`${group.memberName} alerts`}>
+            {group.alerts.map((alert, i) => (
+              <div
+                key={alert.ticker}
+                role="listitem"
+                className="px-4 py-3"
+                style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[13px] truncate" style={{ color: "var(--text-primary)" }}>{alert.ticker}</p>
+                    <p className="text-[11px] font-mono tabular-nums mt-0.5" style={{ color: "var(--text-muted)" }}>
+                      {formatNumber(alert.total_qty)} qty · {formatCurrency(alert.total_buy_value)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <p className="text-[11px] font-mono font-semibold tabular-nums" style={{ color: "var(--color-profit)" }}>
+                        {formatCurrency(alert.profit)}
+                      </p>
+                      <span
+                        className="inline-flex items-center gap-0.5 font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded-md text-[11px] mt-0.5"
+                        style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+                      >
+                        <TrendingUp size={9} strokeWidth={2.5} />
+                        {formatPct(alert.profit_pct)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setSellingTicker(sellingTicker === alert.ticker ? null : alert.ticker)}
+                      aria-label={sellingTicker === alert.ticker ? `Cancel selling ${alert.ticker}` : `Sell all ${alert.ticker}`}
+                      className="px-2.5 py-1.5 min-h-[44px] rounded-md text-[11px] font-semibold cursor-pointer transition-all duration-150"
+                      style={{
+                        color: sellingTicker === alert.ticker ? "white" : "var(--color-loss)",
+                        border: "1px solid rgba(244, 63, 94, 0.3)",
+                        backgroundColor: sellingTicker === alert.ticker ? "var(--color-loss)" : "transparent",
+                      }}
+                    >
+                      {sellingTicker === alert.ticker ? "Cancel" : "Sell All"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden lg:block w-full overflow-x-auto">
+            <table className="w-full text-[13px]">
               <thead>
                 <tr style={{ backgroundColor: "var(--bg-card)" }}>
-                  <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>S.No</th>
                   <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
                   <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</th>
                   <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Value</th>
@@ -111,7 +160,6 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                       borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined,
                     }}
                   >
-                    <td className="px-4 py-2.5 font-mono text-[11px] font-medium whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
                     <td className="px-4 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{alert.ticker}</td>
                     <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatNumber(alert.total_qty)}</td>
                     <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(alert.total_buy_value)}</td>
@@ -132,6 +180,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
                       <button
                         onClick={() => setSellingTicker(sellingTicker === alert.ticker ? null : alert.ticker)}
+                        aria-label={sellingTicker === alert.ticker ? `Cancel selling ${alert.ticker}` : `Sell all ${alert.ticker}`}
                         className="px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer transition-all duration-150"
                         style={{
                           color: sellingTicker === alert.ticker ? "white" : "var(--color-loss)",
@@ -172,13 +221,16 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
 export function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchAlerts = useCallback(async () => {
     try {
       const data = await api.getAlerts()
       setAlerts(data)
-    } catch (e) {
+      setError(null)
+    } catch (e: any) {
       console.error(e)
+      setError(e?.message || "Failed to load alerts")
     } finally {
       setLoading(false)
     }
@@ -223,10 +275,47 @@ export function AlertsPage() {
     return Array.from(map.values())
   }, [alerts])
 
+  if (error) {
+    return <PageError error={error} onRetry={() => { setLoading(true); fetchAlerts() }} />
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-5 h-5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+      <div className="animate-page-enter">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-7 w-32 rounded-md" style={{ backgroundColor: "var(--bg-elevated)" }} />
+          <div className="h-7 w-36 rounded-lg" style={{ backgroundColor: "var(--bg-elevated)" }} />
+        </div>
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl mb-3 overflow-hidden"
+            style={{ border: "1px solid var(--border-color)" }}
+          >
+            <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "var(--bg-card)" }}>
+              <div className="flex items-center gap-2.5">
+                <div className="h-4 w-4 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                <div className="h-4 w-24 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                <div className="h-5 w-16 rounded-md" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
+              {[...Array(2)].map((_, j) => (
+                <div key={j} className="flex items-center gap-4 px-4 py-2.5" style={{ borderTop: j > 0 ? "1px solid var(--border-subtle)" : undefined }}>
+                  <div className="h-4 w-8 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                  <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                  <div className="flex-1" />
+                  <div className="h-4 w-16 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                  <div className="h-4 w-16 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     )
   }
@@ -264,7 +353,7 @@ export function AlertsPage() {
               border: "1px solid rgba(245, 158, 11, 0.15)",
             }}
           >
-            <Bell size={22} strokeWidth={1.5} style={{ color: "#F59E0B" }} />
+            <Bell size={22} strokeWidth={1.5} style={{ color: "var(--color-warning)" }} />
           </div>
           <p className="text-[14px] font-semibold tracking-tight mb-1" style={{ color: "var(--text-primary)" }}>
             No Active Alerts
@@ -288,7 +377,7 @@ export function AlertsPage() {
       ) : (
         <div>
           {groups.map((group, i) => (
-            <div key={group.memberId} className="animate-stagger" style={{ animationDelay: `${i * 50}ms` }}>
+            <div key={group.memberId} className="animate-stagger" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
               <MemberAlertGroup group={group} onSellSuccess={fetchAlerts} />
             </div>
           ))}

@@ -3,17 +3,17 @@ import { api, type Lot } from "@/lib/api"
 import { formatCurrency } from "@/lib/utils"
 import { FormError, SubmitButton, INLINE_INPUT_CLASSES } from "@/components/ui/form"
 
-interface SellFormProps {
+interface EditFormProps {
   lot: Lot
-  defaultSellRate?: number
   onClose: () => void
   onSuccess: () => void
 }
 
-export function SellForm({ lot, defaultSellRate, onClose, onSuccess }: SellFormProps) {
-  const [sellDate, setSellDate] = useState(new Date().toISOString().split("T")[0])
-  const [sellQty, setSellQty] = useState(lot.buy_qty.toString())
-  const [sellRate, setSellRate] = useState(defaultSellRate ? String(defaultSellRate) : "")
+export function EditForm({ lot, onClose, onSuccess }: EditFormProps) {
+  const [buyDate, setBuyDate] = useState(lot.buy_date)
+  const [buyQty, setBuyQty] = useState(lot.buy_qty.toString())
+  const [buyRate, setBuyRate] = useState(lot.buy_rate.toString())
+  const [notes, setNotes] = useState(lot.notes ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const firstInputRef = useRef<HTMLInputElement>(null)
@@ -23,25 +23,23 @@ export function SellForm({ lot, defaultSellRate, onClose, onSuccess }: SellFormP
     firstInputRef.current?.focus()
   }, [])
 
-  const sellValue = sellQty && sellRate ? (parseFloat(sellQty) * parseFloat(sellRate)).toFixed(2) : "0.00"
-  const proportionalBuyValue = sellQty ? ((parseFloat(sellQty) / lot.buy_qty) * lot.buy_value).toFixed(2) : "0.00"
-  const pnl = sellValue && proportionalBuyValue ? (parseFloat(sellValue) - parseFloat(proportionalBuyValue)).toFixed(2) : "0.00"
+  const buyValue = buyQty && buyRate ? (parseFloat(buyQty) * parseFloat(buyRate)).toFixed(2) : "0.00"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setSaving(true)
     try {
-      await api.sellLot({
-        lot_id: lot.id,
-        sell_date: sellDate,
-        sell_qty: parseFloat(sellQty),
-        sell_rate: parseFloat(sellRate),
+      await api.editLot(lot.id, {
+        buy_date: buyDate,
+        buy_qty: parseFloat(buyQty),
+        buy_rate: parseFloat(buyRate),
+        notes: notes.trim() || null,
       })
       onSuccess()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sell")
+      setError(err instanceof Error ? err.message : "Failed to save")
     } finally {
       setSaving(false)
     }
@@ -63,10 +61,7 @@ export function SellForm({ lot, defaultSellRate, onClose, onSuccess }: SellFormP
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-[12px] font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
-              Sell {lot.ticker} — Lot {lot.lot_label}
-              <span className="font-normal ml-1.5" style={{ color: "var(--text-muted)" }}>
-                ({lot.buy_qty} qty @ ₹{lot.buy_rate})
-              </span>
+              Edit {lot.ticker} — Lot {lot.lot_label}
             </span>
             <button
               type="button"
@@ -78,29 +73,28 @@ export function SellForm({ lot, defaultSellRate, onClose, onSuccess }: SellFormP
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
             <div>
-              <label htmlFor={`${uid}-date`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Date</label>
+              <label htmlFor={`${uid}-date`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Buy Date</label>
               <input
                 ref={firstInputRef}
                 id={`${uid}-date`}
                 type="date"
-                value={sellDate}
-                onChange={(e) => setSellDate(e.target.value)}
+                value={buyDate}
+                onChange={(e) => setBuyDate(e.target.value)}
                 required
                 className={inputClasses}
                 style={{ border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-qty`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Qty</label>
+              <label htmlFor={`${uid}-qty`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Qty</label>
               <input
                 id={`${uid}-qty`}
                 type="number"
-                value={sellQty}
-                onChange={(e) => setSellQty(e.target.value)}
+                value={buyQty}
+                onChange={(e) => setBuyQty(e.target.value)}
                 min="0.01"
-                max={lot.buy_qty}
                 step="0.01"
                 required
                 className={inputClasses}
@@ -108,12 +102,12 @@ export function SellForm({ lot, defaultSellRate, onClose, onSuccess }: SellFormP
               />
             </div>
             <div>
-              <label htmlFor={`${uid}-rate`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Rate (₹)</label>
+              <label htmlFor={`${uid}-rate`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Rate (₹)</label>
               <input
                 id={`${uid}-rate`}
                 type="number"
-                value={sellRate}
-                onChange={(e) => setSellRate(e.target.value)}
+                value={buyRate}
+                onChange={(e) => setBuyRate(e.target.value)}
                 min="0.01"
                 step="0.01"
                 required
@@ -122,23 +116,35 @@ export function SellForm({ lot, defaultSellRate, onClose, onSuccess }: SellFormP
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>P/L</label>
+              <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Value</label>
               <div
                 className="px-2.5 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-[12px] font-mono font-semibold tabular-nums flex items-center"
                 style={{
                   border: "1px solid var(--border-subtle)",
-                  color: parseFloat(pnl) >= 0 ? "var(--color-profit)" : "var(--color-loss)",
+                  color: "var(--text-primary)",
                   backgroundColor: "var(--bg-card)",
                 }}
               >
-                {formatCurrency(parseFloat(pnl))}
+                {formatCurrency(parseFloat(buyValue))}
               </div>
+            </div>
+            <div>
+              <label htmlFor={`${uid}-notes`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Notes</label>
+              <input
+                id={`${uid}-notes`}
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional"
+                className={inputClasses}
+                style={{ border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+              />
             </div>
           </div>
 
           {error && <FormError message={error} />}
 
-          <SubmitButton loading={saving} label="Confirm Sell" loadingLabel="Processing..." variant="destructive" />
+          <SubmitButton loading={saving} label="Save Changes" loadingLabel="Saving..." />
         </form>
       </td>
     </tr>

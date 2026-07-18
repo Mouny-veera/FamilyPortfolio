@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useState, useRef, useEffect, useId } from "react"
 import { api } from "@/lib/api"
 import { formatNumber, formatCurrency, formatPct } from "@/lib/utils"
+import { FormError, SubmitButton, INLINE_INPUT_CLASSES } from "@/components/ui/form"
 
 interface SellGroupFormProps {
   memberId: number
@@ -17,6 +18,12 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
   const [sellRate, setSellRate] = useState(defaultSellRate ? String(defaultSellRate) : "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const firstInputRef = useRef<HTMLInputElement>(null)
+  const uid = useId()
+
+  useEffect(() => {
+    firstInputRef.current?.focus()
+  }, [])
 
   const sellValue = sellRate ? (totalQty * parseFloat(sellRate)).toFixed(2) : "0.00"
   const pnl = sellRate ? (parseFloat(sellValue) - totalInvested).toFixed(2) : "0.00"
@@ -42,7 +49,7 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
     }
   }
 
-  const inputClasses = "w-full px-2.5 py-1.5 rounded-lg text-[12px] bg-transparent font-mono tabular-nums transition-all duration-150 outline-none"
+  const inputClasses = INLINE_INPUT_CLASSES
 
   return (
     <div
@@ -63,7 +70,7 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
         <button
           type="button"
           onClick={onClose}
-          className="text-[11px] px-2 py-1 rounded-md font-medium cursor-pointer transition-colors duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+          className="text-[11px] px-2 py-1 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-colors duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
           style={{ color: "var(--text-muted)" }}
         >
           Cancel
@@ -71,10 +78,12 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Date</label>
+            <label htmlFor={`${uid}-date`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Date</label>
             <input
+              ref={firstInputRef}
+              id={`${uid}-date`}
               type="date"
               value={sellDate}
               onChange={(e) => setSellDate(e.target.value)}
@@ -86,15 +95,16 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
           <div>
             <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Total Qty</label>
             <div
-              className="px-2.5 py-1.5 rounded-lg text-[12px] font-mono tabular-nums"
+              className="px-2.5 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-[12px] font-mono tabular-nums flex items-center"
               style={{ border: "1px solid var(--border-subtle)", color: "var(--text-secondary)", backgroundColor: "var(--bg-card)" }}
             >
               {formatNumber(totalQty)}
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Rate (₹)</label>
+            <label htmlFor={`${uid}-rate`} className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Sell Rate (₹)</label>
             <input
+              id={`${uid}-rate`}
               type="number"
               value={sellRate}
               onChange={(e) => setSellRate(e.target.value)}
@@ -108,7 +118,7 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
           <div>
             <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>P/L ({formatPct(parseFloat(pnlPct))})</label>
             <div
-              className="px-2.5 py-1.5 rounded-lg text-[12px] font-mono font-semibold tabular-nums"
+              className="px-2.5 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-[12px] font-mono font-semibold tabular-nums flex items-center"
               style={{
                 border: "1px solid var(--border-subtle)",
                 color: parseFloat(pnl) >= 0 ? "var(--color-profit)" : "var(--color-loss)",
@@ -120,23 +130,9 @@ export function SellGroupForm({ memberId, ticker, totalQty, totalInvested, defau
           </div>
         </div>
 
-        {error && (
-          <p className="text-[11px] font-medium mb-2 px-2 py-1.5 rounded-md" style={{ color: "var(--color-loss)", backgroundColor: "rgba(244, 63, 94, 0.08)" }}>
-            {error}
-          </p>
-        )}
+        {error && <FormError message={error} />}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-4 py-1.5 rounded-lg text-[12px] font-semibold text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: "linear-gradient(135deg, #F43F5E 0%, #E11D48 100%)",
-            boxShadow: "0 2px 6px rgba(244, 63, 94, 0.2)",
-          }}
-        >
-          {saving ? "Processing..." : "Confirm Sell All Lots"}
-        </button>
+        <SubmitButton loading={saving} label="Confirm Sell All Lots" loadingLabel="Processing..." variant="destructive" />
       </form>
     </div>
   )

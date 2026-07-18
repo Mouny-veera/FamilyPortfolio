@@ -1,18 +1,15 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..models import Member, Lot, PriceCache, RealizedPnL
+from ..models import Member, Lot, RealizedPnL
 from ..schemas import (
     DashboardOut, DashboardMemberSnapshot, MemberOut,
 )
+from ..services.portfolio import load_price_map, group_lots_by_ticker, compute_ticker_pnl, is_alert
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
-
-PROFIT_ALERT_THRESHOLD = 10.0
 
 
 @router.get("", response_model=DashboardOut)
@@ -20,8 +17,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     members_result = await db.execute(select(Member).order_by(Member.id))
     members = members_result.scalars().all()
 
-    prices_result = await db.execute(select(PriceCache))
-    price_map = {p.ticker: p for p in prices_result.scalars().all()}
+    price_map = await load_price_map(db)
 
     last_refresh = None
     if price_map:
@@ -46,21 +42,12 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
         member_current = 0.0
         member_alerts = 0
 
-        ticker_groups: dict[str, list] = {}
-        for lot in lots:
-            ticker_groups.setdefault(lot.ticker, []).append(lot)
-
-        for ticker, ticker_lots in ticker_groups.items():
-            price = price_map.get(ticker)
-            if not price:
-                continue
-            group_qty = sum(l.buy_qty for l in ticker_lots)
-            group_buy_value = sum(l.buy_value for l in ticker_lots)
-            group_current = group_qty * price.last_price
-            member_current += group_current
-            pnl_pct = ((group_current - group_buy_value) / group_buy_value * 100) if group_buy_value > 0 else 0
-            if pnl_pct >= PROFIT_ALERT_THRESHOLD:
-                member_alerts += 1
+        for ticker, ticker_lots in group_lots_by_ticker(lots).items():
+            pnl = compute_ticker_pnl(ticker, ticker_lots, price_map.get(ticker))
+            if pnl:
+                member_current += pnl.current_value
+                if is_alert(pnl):
+                    member_alerts += 1
 
         total_invested += member_invested
         total_current += member_current

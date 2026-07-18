@@ -18,6 +18,13 @@ class BuyRequest(BaseModel):
     notes: str | None = None
 
 
+class EditLotRequest(BaseModel):
+    buy_date: date
+    buy_qty: float = Field(gt=0, description="Quantity must be positive")
+    buy_rate: float = Field(gt=0, description="Rate must be positive")
+    notes: str | None = None
+
+
 class SellRequest(BaseModel):
     lot_id: int
     sell_date: date

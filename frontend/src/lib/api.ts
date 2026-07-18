@@ -1,13 +1,25 @@
+import { loadStoredAuth } from "./auth"
+
 const BASE = "/api"
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {}
   if (options?.body) headers["Content-Type"] = "application/json"
+  const stored = loadStoredAuth()
+  if (stored?.token) {
+    headers["Authorization"] = `Bearer ${stored.token}`
+  }
   const res = await fetch(`${BASE}${path}`, {
     headers,
     ...options,
   })
   if (!res.ok) {
+    if (res.status === 401 && path !== "/auth/google") {
+      const { clearAuth } = await import("./auth")
+      clearAuth()
+      window.location.reload()
+      throw new Error("Session expired")
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(err.detail || "Request failed")
   }
@@ -133,15 +145,6 @@ export interface ScanResult {
   scanned_at: string
 }
 
-export interface ProfitTrend {
-  financial_year: string
-  total_pnl: number
-  total_invested: number
-  total_sell_value: number
-  trade_count: number
-  pnl_pct: number
-}
-
 export const api = {
   getMembers: () => request<Member[]>("/members"),
   getMember: (id: number) => request<Member>(`/members/${id}`),
@@ -166,9 +169,14 @@ export const api = {
     sell_date: string
     sell_rate: number
   }) => request<RealizedPnL[]>("/holdings/sell-group", { method: "POST", body: JSON.stringify(data) }),
+  editLot: (lotId: number, data: {
+    buy_date: string
+    buy_qty: number
+    buy_rate: number
+    notes?: string | null
+  }) => request<Lot>(`/holdings/lot/${lotId}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteLot: (lotId: number) => request<{ status: string }>(`/holdings/lot/${lotId}`, { method: "DELETE" }),
   getDashboard: () => request<Dashboard>("/dashboard"),
-  getProfitTrend: () => request<ProfitTrend[]>("/dashboard/profit-trend"),
   getScanResults: () => request<ScanResult[]>("/scanner/results"),
   runScanner: () => request<{ status: string; results_count: number }>("/scanner/run", { method: "POST" }),
   refreshPrices: () => request<{ updated: number }>("/settings/refresh-prices", { method: "POST" }),
@@ -185,5 +193,12 @@ export const api = {
   setupFyersAutoLogin: (data: { fy_id: string; pin: string; totp_secret: string }) =>
     request<{ status: string; message: string }>("/settings/fyers/setup", { method: "POST", body: JSON.stringify(data) }),
   refreshFyersToken: () => request<{ status: string; message: string }>("/settings/fyers/refresh-token", { method: "POST" }),
+  getFyersStatus: () => request<{ connected: boolean; token_valid: boolean; fy_id?: string; message: string }>("/settings/fyers/status"),
+  exchangeFyersAuthCode: (auth_code: string) => request<{ status: string; message: string }>("/settings/fyers/manual-token", { method: "POST", body: JSON.stringify({ auth_code }) }),
   removeFyers: () => request<{ status: string; message: string }>("/settings/fyers", { method: "DELETE" }),
+  googleLogin: (credential: string) =>
+    request<{ token: string; email: string; name: string; picture: string | null }>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential }),
+    }),
 }

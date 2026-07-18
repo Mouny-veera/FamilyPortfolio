@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import get_db
 from ..models import Member, Lot, RealizedPnL, PriceCache, ScanResult, derive_financial_year
 from ..schemas import (
-    BuyRequest, SellRequest, SellGroupRequest, LotOut, LotGroupOut,
+    BuyRequest, EditLotRequest, SellRequest, SellGroupRequest, LotOut, LotGroupOut,
     RealizedPnLOut, MemberHoldingsOut, HoldingsSummary, MemberOut, NseSuggestion,
 )
 from ..services.nse_master import fuzzy_match_ticker, get_nse_symbol_set
@@ -91,80 +91,31 @@ async def add_buy(req: BuyRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/sell", response_model=RealizedPnLOut)
 async def sell_lot(req: SellRequest, db: AsyncSession = Depends(get_db)):
-    lot = await db.get(Lot, req.lot_id)
-    if not lot:
-        raise HTTPException(status_code=404, detail="Lot not found")
+    async with db.begin():
+        lot_result = await db.execute(
+            select(Lot).where(Lot.id == req.lot_id).with_for_update()
+        )
+        lot = lot_result.scalar_one_or_none()
+        if not lot:
+            raise HTTPException(status_code=404, detail="Lot not found")
 
-    if req.sell_qty > lot.buy_qty + 0.001:
-        raise HTTPException(status_code=400, detail="Sell qty exceeds lot qty")
+        if req.sell_qty > lot.buy_qty + 0.001:
+            raise HTTPException(status_code=400, detail="Sell qty exceeds lot qty")
 
-    sell_value = round(req.sell_qty * req.sell_rate, 2)
-    proportional_buy_value = round((req.sell_qty / lot.buy_qty) * lot.buy_value, 2)
-    profit_loss = round(sell_value - proportional_buy_value, 2)
-    profit_loss_pct = round((profit_loss / proportional_buy_value) * 100, 4) if proportional_buy_value > 0 else 0
-
-    pnl = RealizedPnL(
-        member_id=lot.member_id,
-        ticker=lot.ticker,
-        buy_date=lot.buy_date,
-        buy_qty=req.sell_qty,
-        buy_rate=lot.buy_rate,
-        buy_value=proportional_buy_value,
-        sell_date=req.sell_date,
-        sell_qty=req.sell_qty,
-        sell_rate=req.sell_rate,
-        sell_value=sell_value,
-        profit_loss=profit_loss,
-        profit_loss_pct=profit_loss_pct,
-        financial_year=derive_financial_year(req.sell_date),
-        lot_label=lot.lot_label,
-        notes=lot.notes,
-    )
-    db.add(pnl)
-
-    remaining_qty = round(lot.buy_qty - req.sell_qty, 4)
-    if remaining_qty < 0.001:
-        await db.delete(lot)
-    else:
-        lot.buy_qty = remaining_qty
-        lot.buy_value = round(lot.buy_value - proportional_buy_value, 2)
-
-    await db.commit()
-    await db.refresh(pnl)
-    return pnl
-
-
-@router.post("/sell-group", response_model=list[RealizedPnLOut])
-async def sell_group(req: SellGroupRequest, db: AsyncSession = Depends(get_db)):
-    member = await db.get(Member, req.member_id)
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found")
-
-    ticker = req.ticker.upper().strip()
-    lots_result = await db.execute(
-        select(Lot)
-        .where(Lot.member_id == req.member_id, Lot.ticker == ticker)
-        .order_by(Lot.buy_date)
-    )
-    lots = lots_result.scalars().all()
-    if not lots:
-        raise HTTPException(status_code=404, detail="No active lots for this ticker")
-
-    results = []
-    for lot in lots:
-        sell_value = round(lot.buy_qty * req.sell_rate, 2)
-        profit_loss = round(sell_value - lot.buy_value, 2)
-        profit_loss_pct = round((profit_loss / lot.buy_value) * 100, 4) if lot.buy_value > 0 else 0
+        sell_value = round(req.sell_qty * req.sell_rate, 2)
+        proportional_buy_value = round((req.sell_qty / lot.buy_qty) * lot.buy_value, 2)
+        profit_loss = round(sell_value - proportional_buy_value, 2)
+        profit_loss_pct = round((profit_loss / proportional_buy_value) * 100, 4) if proportional_buy_value > 0 else 0
 
         pnl = RealizedPnL(
             member_id=lot.member_id,
             ticker=lot.ticker,
             buy_date=lot.buy_date,
-            buy_qty=lot.buy_qty,
+            buy_qty=req.sell_qty,
             buy_rate=lot.buy_rate,
-            buy_value=lot.buy_value,
+            buy_value=proportional_buy_value,
             sell_date=req.sell_date,
-            sell_qty=lot.buy_qty,
+            sell_qty=req.sell_qty,
             sell_rate=req.sell_rate,
             sell_value=sell_value,
             profit_loss=profit_loss,
@@ -174,10 +125,63 @@ async def sell_group(req: SellGroupRequest, db: AsyncSession = Depends(get_db)):
             notes=lot.notes,
         )
         db.add(pnl)
-        await db.delete(lot)
-        results.append(pnl)
 
-    await db.commit()
+        remaining_qty = round(lot.buy_qty - req.sell_qty, 4)
+        if remaining_qty < 0.001:
+            await db.delete(lot)
+        else:
+            lot.buy_qty = remaining_qty
+            lot.buy_value = round(lot.buy_value - proportional_buy_value, 2)
+
+    await db.refresh(pnl)
+    return pnl
+
+
+@router.post("/sell-group", response_model=list[RealizedPnLOut])
+async def sell_group(req: SellGroupRequest, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        member = await db.get(Member, req.member_id)
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+
+        ticker = req.ticker.upper().strip()
+        lots_result = await db.execute(
+            select(Lot)
+            .where(Lot.member_id == req.member_id, Lot.ticker == ticker)
+            .with_for_update()
+            .order_by(Lot.buy_date)
+        )
+        lots = lots_result.scalars().all()
+        if not lots:
+            raise HTTPException(status_code=404, detail="No active lots for this ticker")
+
+        results = []
+        for lot in lots:
+            sell_value = round(lot.buy_qty * req.sell_rate, 2)
+            profit_loss = round(sell_value - lot.buy_value, 2)
+            profit_loss_pct = round((profit_loss / lot.buy_value) * 100, 4) if lot.buy_value > 0 else 0
+
+            pnl = RealizedPnL(
+                member_id=lot.member_id,
+                ticker=lot.ticker,
+                buy_date=lot.buy_date,
+                buy_qty=lot.buy_qty,
+                buy_rate=lot.buy_rate,
+                buy_value=lot.buy_value,
+                sell_date=req.sell_date,
+                sell_qty=lot.buy_qty,
+                sell_rate=req.sell_rate,
+                sell_value=sell_value,
+                profit_loss=profit_loss,
+                profit_loss_pct=profit_loss_pct,
+                financial_year=derive_financial_year(req.sell_date),
+                lot_label=lot.lot_label,
+                notes=lot.notes,
+            )
+            db.add(pnl)
+            await db.delete(lot)
+            results.append(pnl)
+
     for pnl in results:
         await db.refresh(pnl)
     return results
@@ -282,6 +286,24 @@ async def get_member_holdings(member_id: int, db: AsyncSession = Depends(get_db)
         holdings=holdings,
         realized_pnl=realized,
     )
+
+
+@router.put("/lot/{lot_id}", response_model=LotOut)
+async def edit_lot(lot_id: int, req: EditLotRequest, db: AsyncSession = Depends(get_db)):
+    lot = await db.get(Lot, lot_id)
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lot not found")
+
+    lot.buy_date = req.buy_date
+    lot.buy_qty = req.buy_qty
+    lot.buy_rate = req.buy_rate
+    lot.buy_value = round(req.buy_qty * req.buy_rate, 2)
+    lot.financial_year = derive_financial_year(req.buy_date)
+    lot.notes = req.notes
+
+    await db.commit()
+    await db.refresh(lot)
+    return lot
 
 
 @router.delete("/lot/{lot_id}")

@@ -29,6 +29,13 @@
   --color-warning: #F59E0B;
   --alert-row-bg: rgba(16, 185, 129, 0.04);
   --alert-row-border: rgba(16, 185, 129, 0.12);
+  --gradient-accent: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  --gradient-destructive: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  --gradient-info: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  --shadow-accent: 0 2px 8px rgba(16, 185, 129, 0.25);
+  --shadow-destructive: 0 2px 6px rgba(244, 63, 94, 0.2);
+  --shadow-info: 0 2px 8px rgba(99, 102, 241, 0.25);
+  --color-info-light: #818CF8;
 }
 
 .dark {
@@ -98,6 +105,7 @@ h1, h2, h3 {
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
@@ -248,7 +256,8 @@ html {
   .animate-card-enter {
     animation: none !important;
   }
-  .animate-pulse-subtle {
+  .animate-pulse-subtle,
+  .animate-spin {
     animation: none !important;
   }
   html {

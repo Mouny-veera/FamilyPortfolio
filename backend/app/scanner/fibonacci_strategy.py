@@ -48,14 +48,14 @@ class FibonacciRetracementStrategy(BaseStrategy):
             ticker=ticker,
             score=round(max(0, min(100, score)), 2),
             metrics={
-                "high_3m": round(high, 2),
-                "low_3m": round(low, 2),
+                "high_6m": round(high, 2),
+                "low_6m": round(low, 2),
                 "current": round(current, 2),
                 "fib_236": round(fib_236, 2),
                 "fib_382": round(fib_382, 2),
                 "fib_500": round(fib_500, 2),
                 "fib_618": round(fib_618, 2),
                 "proximity_618": round(proximity_618, 4),
-                "near_618": near_618,
+                "near_618": bool(near_618),
             },
         )

@@ -30,11 +30,13 @@ class _StockCache:
     def __init__(self):
         self._stocks: list[_CachedStock] = []
         self._symbol_set: set[str] = set()
+        self._series_map: dict[str, str] = {}
         self._lock = threading.Lock()
 
     def load(self, stocks: list[dict]):
         items = []
         symbols = set()
+        series_map = {}
         for s in stocks:
             sym = s["symbol"]
             name = s["company_name"]
@@ -48,9 +50,11 @@ class _StockCache:
                 name_tokens=frozenset(name_upper.replace("-", " ").replace(".", " ").split()),
             ))
             symbols.add(sym)
+            series_map[sym] = s.get("series", "EQ")
         with self._lock:
             self._stocks = items
             self._symbol_set = symbols
+            self._series_map = series_map
 
     @property
     def loaded(self) -> bool:
@@ -62,6 +66,9 @@ class _StockCache:
     @property
     def symbol_set(self) -> frozenset[str]:
         return frozenset(self._symbol_set)
+
+    def get_series(self, symbol: str) -> str:
+        return self._series_map.get(symbol, "EQ")
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
         q = query.upper().strip()
@@ -145,36 +152,46 @@ async def _load_cache_from_db():
         rows = result.scalars().all()
         if rows:
             _cache.load([
-                {"symbol": r.symbol, "company_name": r.company_name, "isin": r.isin}
+                {"symbol": r.symbol, "company_name": r.company_name, "isin": r.isin, "series": r.series}
                 for r in rows
             ])
             print(f"Stock cache: loaded {len(rows)} stocks from DB")
 
 
 def _parse_fyers_csv(text: str) -> list[dict]:
-    """Parse Fyers NSE_CM.csv — no header row, columns are positional."""
-    seen: set[str] = set()
-    stocks = []
+    """Parse Fyers NSE_CM.csv — no header row, columns are positional.
+
+    Includes all tradeable series (EQ, BE, etc.). When a symbol appears in
+    multiple series, EQ takes priority.
+    """
+    seen: dict[str, str] = {}
+    stocks_by_sym: dict[str, dict] = {}
     reader = csv.reader(io.StringIO(text))
     for row in reader:
         if len(row) < 14:
             continue
         fyers_symbol = row[9].strip()  # e.g. NSE:RELIANCE-EQ
-        if not fyers_symbol.endswith("-EQ"):
+        if not fyers_symbol.startswith("NSE:") or "-" not in fyers_symbol:
             continue
-        symbol = row[13].strip()  # short symbol e.g. RELIANCE
-        if not symbol or symbol in seen:
+        series = fyers_symbol.split("-")[-1]
+        if series in ("INDEX", "SG", "MF"):
             continue
-        seen.add(symbol)
+        symbol = row[13].strip()
+        if not symbol:
+            continue
+        prev_series = seen.get(symbol)
+        if prev_series == "EQ":
+            continue
+        seen[symbol] = series
         company_name = row[1].strip()
         isin = row[5].strip()
-        stocks.append({
+        stocks_by_sym[symbol] = {
             "symbol": symbol,
             "company_name": company_name,
             "isin": isin,
-            "series": "EQ",
-        })
-    return stocks
+            "series": series,
+        }
+    return list(stocks_by_sym.values())
 
 
 async def fetch_nse_master_list() -> list[dict]:
@@ -188,9 +205,9 @@ async def fetch_nse_master_list() -> list[dict]:
 
         stocks = _parse_fyers_csv(resp.text)
         if not stocks:
-            raise ValueError("No EQ stocks found in Fyers symbols CSV")
+            raise ValueError("No tradeable stocks found in Fyers symbols CSV")
 
-        print(f"Fyers symbols: parsed {len(stocks)} equity stocks")
+        print(f"Fyers symbols: parsed {len(stocks)} stocks")
         return stocks
 
 
@@ -237,6 +254,14 @@ def is_valid_nse_symbol(symbol: str) -> bool:
 
 def get_nse_symbol_set() -> set[str]:
     return _cache.symbol_set
+
+
+def get_fyers_symbol(ticker: str) -> str | None:
+    """Return the full Fyers symbol (e.g. 'NSE:RELIANCE-EQ') or None if unknown."""
+    if not _cache.has_symbol(ticker):
+        return None
+    series = _cache.get_series(ticker)
+    return f"NSE:{ticker}-{series}"
 
 
 async def get_mapping_status(db: AsyncSession) -> list[dict]:

@@ -6,6 +6,7 @@ import { formatCurrency, formatPct, formatDate, formatNumber, filterAndSortByTic
 import { MetricCards } from "./MetricCards"
 import { LotGroup } from "./LotGroup"
 import { BuyForm } from "./BuyForm"
+import { PageError } from "@/components/ui/PageError"
 
 function PnLSummary({ data }: { data: RealizedPnL[] }) {
   if (data.length === 0) return null
@@ -42,6 +43,7 @@ export function HoldingsPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const [data, setData] = useState<MemberHoldings | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<"active" | "pnl">("active")
   const [showBuy, setShowBuy] = useState(false)
   const [search, setSearch] = useState("")
@@ -56,8 +58,10 @@ export function HoldingsPage() {
     try {
       const holdings = await api.getHoldings(id)
       setData(holdings)
-    } catch (e) {
+      setError(null)
+    } catch (e: any) {
       console.error(e)
+      setError(e?.message || "Failed to load holdings")
     } finally {
       setLoading(false)
     }
@@ -111,6 +115,10 @@ export function HoldingsPage() {
     )
   }
 
+  if (error) {
+    return <PageError error={error} onRetry={() => { setLoading(true); fetchData() }} />
+  }
+
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -123,7 +131,7 @@ export function HoldingsPage() {
     <div className="animate-page-enter">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
             {data.member.name}
           </h1>
         </div>
@@ -131,8 +139,8 @@ export function HoldingsPage() {
           onClick={() => setShowBuy(true)}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
           style={{
-            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+            background: "var(--gradient-accent)",
+            boxShadow: "var(--shadow-accent)",
           }}
         >
           <Plus size={15} strokeWidth={2} />
@@ -145,6 +153,8 @@ export function HoldingsPage() {
       <div
         className="flex gap-0.5 mb-5 p-0.5 rounded-lg"
         style={{ backgroundColor: "var(--bg-secondary)" }}
+        role="tablist"
+        aria-label="Holdings view"
       >
         {[
           { key: "active" as const, label: `Active Holdings (${data.holdings.length})` },
@@ -153,6 +163,8 @@ export function HoldingsPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
+            role="tab"
+            aria-selected={tab === t.key}
             className="flex-1 py-2 rounded-md text-[13px] font-medium cursor-pointer transition-all duration-150"
             style={{
               backgroundColor: tab === t.key ? "var(--bg-card)" : "transparent",
@@ -216,7 +228,7 @@ export function HoldingsPage() {
             </div>
           ) : (
             filteredHoldings.map((group, i) => (
-              <div key={group.ticker} className="animate-stagger" style={{ animationDelay: `${i * 30}ms` }}>
+              <div key={group.ticker} className="animate-stagger" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
                 <LotGroup group={group} memberId={id} onRefresh={fetchData} />
               </div>
             ))

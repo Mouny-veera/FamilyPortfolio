@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import { api } from "@/lib/api"
-import { RefreshCw, Database, Info, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield } from "lucide-react"
+import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2 } from "lucide-react"
 
 interface ProviderInfo {
   active: string
@@ -8,11 +8,13 @@ interface ProviderInfo {
   fyers_client_id: string
   fyers_fy_id: string
   auto_login: boolean
+  auth_url?: string
 }
 
 export function SettingsPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [refreshResult, setRefreshResult] = useState<string | null>(null)
+  const uid = useId()
 
   const [providerInfo, setProviderInfo] = useState<ProviderInfo | null>(null)
 
@@ -22,11 +24,39 @@ export function SettingsPage() {
   const [totpSecret, setTotpSecret] = useState("")
   const [fyersSaving, setFyersSaving] = useState(false)
   const [fyersMsg, setFyersMsg] = useState<{ type: "ok" | "error"; text: string } | null>(null)
-  const [tokenRefreshing, setTokenRefreshing] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState<{ connected: boolean; token_valid: boolean; message: string } | null>(null)
+  const [tokenStatusLoading, setTokenStatusLoading] = useState(false)
+
+  const checkTokenStatus = async () => {
+    setTokenStatusLoading(true)
+    try {
+      const status = await api.getFyersStatus()
+      setTokenStatus(status)
+    } catch {
+      setTokenStatus(null)
+    } finally {
+      setTokenStatusLoading(false)
+    }
+  }
 
   useEffect(() => {
-    api.getDataProvider().then(setProviderInfo).catch(console.error)
+    api.getDataProvider().then((info) => {
+      setProviderInfo(info)
+      if (info.active === "fyers") {
+        checkTokenStatus()
+      }
+    }).catch(console.error)
   }, [])
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (providerInfo?.active === "fyers") {
+        checkTokenStatus()
+      }
+    }
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [providerInfo?.active])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -71,24 +101,6 @@ export function SettingsPage() {
     }
   }
 
-  const handleTokenRefresh = async () => {
-    setTokenRefreshing(true)
-    setFyersMsg(null)
-    try {
-      const result = await api.refreshFyersToken()
-      if (result.status === "ok") {
-        setFyersMsg({ type: "ok", text: "Token refreshed automatically" })
-        api.getDataProvider().then(setProviderInfo)
-      } else {
-        setFyersMsg({ type: "error", text: result.message })
-      }
-    } catch (e) {
-      setFyersMsg({ type: "error", text: e instanceof Error ? e.message : "Refresh failed" })
-    } finally {
-      setTokenRefreshing(false)
-    }
-  }
-
   const handleFyersRemove = async () => {
     try {
       await api.removeFyers()
@@ -124,7 +136,7 @@ export function SettingsPage() {
               className="w-7 h-7 rounded-lg flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 100%)", border: "1px solid rgba(16, 185, 129, 0.15)" }}
             >
-              <RefreshCw size={14} strokeWidth={1.5} style={{ color: "#10B981" }} />
+              <RefreshCw size={14} strokeWidth={1.5} style={{ color: "var(--color-profit)" }} />
             </div>
             <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
               Market Data
@@ -145,10 +157,10 @@ export function SettingsPage() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
-                background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-                boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+                background: "var(--gradient-accent)",
+                boxShadow: "var(--shadow-accent)",
               }}
             >
               <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
@@ -172,7 +184,7 @@ export function SettingsPage() {
               className="w-7 h-7 rounded-lg flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 100%)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
             >
-              <Zap size={14} strokeWidth={1.5} style={{ color: "#6366F1" }} />
+              <Zap size={14} strokeWidth={1.5} style={{ color: "var(--color-info)" }} />
             </div>
             <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
               Fyers API
@@ -199,34 +211,63 @@ export function SettingsPage() {
                 {providerInfo.auto_login && (
                   <div
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
-                    style={{ backgroundColor: "rgba(99, 102, 241, 0.08)", color: "#818CF8" }}
+                    style={{ backgroundColor: "rgba(99, 102, 241, 0.08)", color: "var(--color-info-light)" }}
                   >
                     <Shield size={11} />
                     Auto-refresh enabled
                   </div>
                 )}
               </div>
+              {/* Token status indicator */}
               <div className="flex items-center gap-2">
-                {providerInfo.auto_login && (
-                  <button
-                    onClick={handleTokenRefresh}
-                    disabled={tokenRefreshing}
-                    className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-md font-medium cursor-pointer transition-all duration-200 disabled:opacity-50"
-                    style={{
-                      color: "var(--color-accent)",
-                      border: "1px solid rgba(16, 185, 129, 0.3)",
-                    }}
+                {tokenStatusLoading ? (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
+                    style={{ color: "var(--text-muted)" }}>
+                    <Loader2 size={12} className="animate-spin" />
+                    Checking token...
+                  </div>
+                ) : tokenStatus?.token_valid ? (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
+                    style={{ backgroundColor: "rgba(16, 185, 129, 0.06)", color: "var(--color-profit)" }}>
+                    <CheckCircle2 size={12} strokeWidth={2} />
+                    Token valid
+                  </div>
+                ) : tokenStatus && !tokenStatus.token_valid ? (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
+                    style={{ backgroundColor: "rgba(244, 63, 94, 0.06)", color: "var(--color-loss)" }}>
+                    <XCircle size={12} strokeWidth={2} />
+                    Token expired — refresh needed
+                  </div>
+                ) : null}
+                <button
+                  onClick={checkTokenStatus}
+                  disabled={tokenStatusLoading}
+                  className="text-[11px] px-1.5 py-1 rounded-md cursor-pointer transition-all duration-200 disabled:opacity-40"
+                  style={{ color: "var(--text-muted)" }}
+                  aria-label="Re-check token status"
+                >
+                  <RefreshCw size={11} />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {providerInfo?.auth_url && !tokenStatus?.token_valid && (
+                  <a
+                    href={providerInfo.auth_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium text-white no-underline cursor-pointer transition-all duration-200"
+                    style={{ background: "var(--gradient-accent)" }}
                   >
                     <KeyRound size={12} />
-                    {tokenRefreshing ? "Refreshing..." : "Refresh Token Now"}
-                  </button>
+                    Login to Fyers
+                  </a>
                 )}
-                {!providerInfo.auto_login && (
+                {!providerInfo?.auto_login && (
                   <button
                     onClick={() => setShowFyersForm(true)}
-                    className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-md font-medium cursor-pointer transition-all duration-200"
+                    className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
                     style={{
-                      color: "#818CF8",
+                      color: "var(--color-info-light)",
                       border: "1px solid rgba(99, 102, 241, 0.3)",
                     }}
                   >
@@ -236,7 +277,7 @@ export function SettingsPage() {
                 )}
                 <button
                   onClick={handleFyersRemove}
-                  className="text-[11px] px-2.5 py-1.5 rounded-md font-medium cursor-pointer transition-all duration-200"
+                  className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
                   style={{
                     color: "var(--color-loss)",
                     border: "1px solid rgba(244, 63, 94, 0.3)",
@@ -254,8 +295,8 @@ export function SettingsPage() {
               onClick={() => setShowFyersForm(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
               style={{
-                background: "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
-                boxShadow: "0 2px 8px rgba(99, 102, 241, 0.25)",
+                background: "var(--gradient-info)",
+                boxShadow: "var(--shadow-info)",
               }}
             >
               <Zap size={14} />
@@ -275,7 +316,8 @@ export function SettingsPage() {
                 </span>
                 <button
                   onClick={() => { setShowFyersForm(false); setFyersMsg(null) }}
-                  className="p-1 rounded cursor-pointer hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
+                  aria-label="Close form"
+                  className="p-2 min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 flex items-center justify-center rounded cursor-pointer hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
                 >
                   <X size={14} style={{ color: "var(--text-muted)" }} />
                 </button>
@@ -284,10 +326,11 @@ export function SettingsPage() {
                 Enter your Fyers login credentials. The app will generate and refresh tokens automatically — no manual login needed.
               </p>
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1" style={{ color: "var(--text-muted)" }}>
+                <label htmlFor={`${uid}-fyid`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1" style={{ color: "var(--text-muted)" }}>
                   Fyers ID
                 </label>
                 <input
+                  id={`${uid}-fyid`}
                   type="text"
                   value={fyerId}
                   onChange={(e) => setFyerId(e.target.value)}
@@ -297,10 +340,11 @@ export function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1" style={{ color: "var(--text-muted)" }}>
+                <label htmlFor={`${uid}-pin`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1" style={{ color: "var(--text-muted)" }}>
                   4-digit PIN
                 </label>
                 <input
+                  id={`${uid}-pin`}
                   type="password"
                   value={fyerPin}
                   onChange={(e) => setFyerPin(e.target.value)}
@@ -311,10 +355,11 @@ export function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1" style={{ color: "var(--text-muted)" }}>
+                <label htmlFor={`${uid}-totp`} className="block text-[11px] font-semibold uppercase tracking-[0.06em] mb-1" style={{ color: "var(--text-muted)" }}>
                   TOTP Secret Key
                 </label>
                 <input
+                  id={`${uid}-totp`}
                   type="password"
                   value={totpSecret}
                   onChange={(e) => setTotpSecret(e.target.value)}
@@ -330,7 +375,7 @@ export function SettingsPage() {
                 className="flex items-start gap-2 px-3 py-2 rounded-lg text-[11px]"
                 style={{ backgroundColor: "rgba(99, 102, 241, 0.06)", border: "1px solid rgba(99, 102, 241, 0.12)" }}
               >
-                <Shield size={13} className="mt-0.5 shrink-0" style={{ color: "#818CF8" }} />
+                <Shield size={13} className="mt-0.5 shrink-0" style={{ color: "var(--color-info-light)" }} />
                 <span style={{ color: "var(--text-secondary)" }}>
                   Credentials are stored locally in <span className="font-mono">data/config.json</span> and never leave your machine.
                 </span>
@@ -338,10 +383,10 @@ export function SettingsPage() {
               <button
                 onClick={handleFyersSetup}
                 disabled={fyersSaving}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40"
                 style={{
-                  background: "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
-                  boxShadow: "0 2px 8px rgba(99, 102, 241, 0.25)",
+                  background: "var(--gradient-info)",
+                  boxShadow: "var(--shadow-info)",
                 }}
               >
                 {fyersSaving ? "Connecting & generating token..." : "Connect & Auto-Login"}
@@ -351,6 +396,7 @@ export function SettingsPage() {
 
           {fyersMsg && (
             <div
+              role="alert"
               className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg text-[12px] font-medium"
               style={{
                 backgroundColor: fyersMsg.type === "ok" ? "rgba(16, 185, 129, 0.08)" : "rgba(244, 63, 94, 0.08)",
@@ -370,7 +416,7 @@ export function SettingsPage() {
               className="w-7 h-7 rounded-lg flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 100%)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
             >
-              <Database size={14} strokeWidth={1.5} style={{ color: "#6366F1" }} />
+              <Database size={14} strokeWidth={1.5} style={{ color: "var(--color-info)" }} />
             </div>
             <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
               Data sources
@@ -391,25 +437,6 @@ export function SettingsPage() {
           </div>
         </div>
 
-        {/* About */}
-        <div className="rounded-xl p-5" style={cardStyle}>
-          <div className="flex items-center gap-2 mb-4">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0%, rgba(148, 163, 184, 0) 100%)", border: "1px solid rgba(148, 163, 184, 0.15)" }}
-            >
-              <Info size={14} strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
-            </div>
-            <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
-              About
-            </h2>
-          </div>
-          <div className="space-y-1.5 text-[12px]" style={{ color: "var(--text-secondary)" }}>
-            <p className="font-medium">Family Portfolio Scanner & Tracker v1.0</p>
-            <p>Local-first · $0/month · SQLite</p>
-            <p style={{ color: "var(--text-muted)" }}>Members: Veerakumar, Sneeha, Mouny, Mani, Devi</p>
-          </div>
-        </div>
       </div>
     </div>
   )

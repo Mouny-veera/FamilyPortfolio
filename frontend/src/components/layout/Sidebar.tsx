@@ -56,20 +56,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-semibold text-sm"
             style={{
-              background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-              boxShadow: "0 2px 8px rgba(16, 185, 129, 0.3)",
+              background: "var(--gradient-accent)",
+              boxShadow: "var(--shadow-accent)",
             }}
           >
             FP
           </div>
-          <div>
-            <h1 className="text-sm font-semibold tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>
-              Family Portfolio
-            </h1>
-            <p className="text-[10px] font-medium mt-0.5 tracking-wide uppercase" style={{ color: "var(--text-muted)" }}>
-              Scanner & Tracker
-            </p>
-          </div>
+          <h1 className="text-sm font-semibold tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>
+            Family Portfolio
+          </h1>
         </div>
         <button
           onClick={onMobileClose}
@@ -90,6 +85,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               <div key={item.to}>
                 <button
                   onClick={() => setHoldingsOpen(!holdingsOpen)}
+                  aria-expanded={holdingsOpen}
                   className={cn(
                     "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150",
                     isActive
@@ -173,16 +169,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         })}
       </nav>
 
-      <div className="px-4 pb-4 pt-2">
-        <div
-          className="rounded-lg px-3 py-2.5 text-[11px]"
-          style={{ backgroundColor: "var(--bg-elevated)", color: "var(--text-muted)" }}
-        >
-          <span className="font-medium" style={{ color: "var(--text-secondary)" }}>v1.0</span>
-          <span className="mx-1.5">·</span>
-          Local · $0/mo
-        </div>
-      </div>
     </>
   )
 
@@ -205,7 +191,11 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <div
             className="absolute inset-0 animate-backdrop-in"
             style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", backdropFilter: "blur(4px)" }}
+            role="button"
+            tabIndex={0}
+            aria-label="Close menu"
             onClick={onMobileClose}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onMobileClose() } }}
           />
           <aside
             className="absolute left-0 top-0 h-full w-[280px] flex flex-col overflow-y-auto animate-slide-in-left"

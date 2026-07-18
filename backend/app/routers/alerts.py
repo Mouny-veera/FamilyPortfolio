@@ -3,12 +3,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..models import Member, Lot, PriceCache
+from ..models import Member, Lot
 from ..schemas import MemberOut
+from ..services.portfolio import load_price_map, group_lots_by_ticker, compute_ticker_pnl, is_alert
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
-
-PROFIT_ALERT_THRESHOLD = 10.0
 
 
 @router.get("")
@@ -16,8 +15,7 @@ async def get_alerts(db: AsyncSession = Depends(get_db)):
     members_result = await db.execute(select(Member).order_by(Member.id))
     members = members_result.scalars().all()
 
-    prices_result = await db.execute(select(PriceCache))
-    price_map = {p.ticker: p for p in prices_result.scalars().all()}
+    price_map = await load_price_map(db)
 
     alerts = []
 
@@ -29,32 +27,19 @@ async def get_alerts(db: AsyncSession = Depends(get_db)):
         )
         lots = lots_result.scalars().all()
 
-        grouped: dict[str, list] = {}
-        for lot in lots:
-            grouped.setdefault(lot.ticker, []).append(lot)
-
-        for ticker, ticker_lots in grouped.items():
-            price = price_map.get(ticker)
-            if not price:
-                continue
-
-            total_qty = sum(l.buy_qty for l in ticker_lots)
-            total_buy_value = sum(l.buy_value for l in ticker_lots)
-            current_value = round(total_qty * price.last_price, 2)
-            profit = round(current_value - total_buy_value, 2)
-            profit_pct = round((profit / total_buy_value) * 100, 2) if total_buy_value else 0
-
-            if profit_pct >= PROFIT_ALERT_THRESHOLD:
+        for ticker, ticker_lots in group_lots_by_ticker(lots).items():
+            pnl = compute_ticker_pnl(ticker, ticker_lots, price_map.get(ticker))
+            if pnl and is_alert(pnl):
                 alerts.append({
                     "member": MemberOut.model_validate(member).model_dump(),
                     "ticker": ticker,
-                    "total_qty": total_qty,
-                    "total_buy_value": round(total_buy_value, 2),
-                    "current_price": price.last_price,
-                    "current_value": current_value,
-                    "profit": profit,
-                    "profit_pct": profit_pct,
-                    "lot_count": len(ticker_lots),
+                    "total_qty": pnl.total_qty,
+                    "total_buy_value": pnl.total_buy_value,
+                    "current_price": pnl.current_price,
+                    "current_value": pnl.current_value,
+                    "profit": pnl.profit,
+                    "profit_pct": pnl.profit_pct,
+                    "lot_count": pnl.lot_count,
                 })
 
     alerts.sort(key=lambda a: -a["profit_pct"])

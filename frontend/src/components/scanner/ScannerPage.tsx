@@ -2,14 +2,19 @@ import { useEffect, useState, useCallback } from "react"
 import { Play, Loader2, Search } from "lucide-react"
 import { api, type ScanResult } from "@/lib/api"
 import { formatNumber } from "@/lib/utils"
+import { PageError } from "@/components/ui/PageError"
 
 export function ScannerPage() {
   const [results, setResults] = useState<ScanResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
 
   const fetchResults = useCallback(() => {
-    api.getScanResults().then(setResults).catch(console.error).finally(() => setLoading(false))
+    api.getScanResults()
+      .then((r) => { setResults(r); setError(null) })
+      .catch((e) => { console.error(e); setError(e?.message || "Failed to load scanner results") })
+      .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
@@ -35,6 +40,10 @@ export function ScannerPage() {
     }
   }
 
+  if (error && !scanning) {
+    return <PageError error={error} onRetry={() => { setLoading(true); fetchResults() }} />
+  }
+
   return (
     <div className="animate-page-enter">
       <div className="flex items-center justify-between mb-6">
@@ -43,16 +52,16 @@ export function ScannerPage() {
             Scanner
           </h1>
           <p className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-            Fibonacci retracement analysis on Nifty 200 universe
+            Fibonacci retracement analysis (6-month) on Nifty 200
           </p>
         </div>
         <button
           onClick={handleScan}
           disabled={scanning}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
-            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+            background: "var(--gradient-accent)",
+            boxShadow: "var(--shadow-accent)",
           }}
         >
           {scanning ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} strokeWidth={2} />}
@@ -65,7 +74,7 @@ export function ScannerPage() {
           className="text-center py-12 rounded-xl mb-4"
           style={{ border: "1px solid var(--border-color)", backgroundColor: "var(--bg-card)", boxShadow: "var(--shadow-card)" }}
         >
-          <div className="w-6 h-6 border-2 border-[#10B981]/30 border-t-[#10B981] rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: "rgba(16, 185, 129, 0.3)", borderTopColor: "var(--color-profit)" }} />
           <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
             Scanning stocks...
           </p>
@@ -82,7 +91,18 @@ export function ScannerPage() {
         >
           <Search size={28} strokeWidth={1.5} className="mx-auto mb-3" style={{ color: "var(--text-muted)", opacity: 0.5 }} />
           <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>No scan results yet</p>
-          <p className="text-[12px] mt-1" style={{ color: "var(--text-muted)" }}>Run the scanner to find top picks.</p>
+          <p className="text-[12px] mt-1 mb-4" style={{ color: "var(--text-muted)" }}>Run the scanner to find top picks.</p>
+          <button
+            onClick={handleScan}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
+            style={{
+              background: "var(--gradient-accent)",
+              boxShadow: "var(--shadow-accent)",
+            }}
+          >
+            <Play size={15} strokeWidth={2} />
+            Run Scanner
+          </button>
         </div>
       )}
 
@@ -110,8 +130,8 @@ export function ScannerPage() {
                   <th className="text-left px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
                   <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Score</th>
                   <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>3M High</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>3M Low</th>
+                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>6M High</th>
+                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>6M Low</th>
                   <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Fib 0.618</th>
                   <th className="text-center px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Signal</th>
                 </tr>
@@ -134,10 +154,10 @@ export function ScannerPage() {
                         ₹{formatNumber(m.current as number)}
                       </td>
                       <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                        ₹{formatNumber(m.high_3m as number)}
+                        ₹{formatNumber(m.high_6m as number)}
                       </td>
                       <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                        ₹{formatNumber(m.low_3m as number)}
+                        ₹{formatNumber(m.low_6m as number)}
                       </td>
                       <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
                         ₹{formatNumber(m.fib_618 as number)}
@@ -146,7 +166,7 @@ export function ScannerPage() {
                         {m.near_618 ? (
                           <span
                             className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold"
-                            style={{ backgroundColor: "rgba(245, 158, 11, 0.1)", color: "#F59E0B" }}
+                            style={{ backgroundColor: "rgba(245, 158, 11, 0.1)", color: "var(--color-warning)" }}
                           >
                             Near 0.618
                           </span>
