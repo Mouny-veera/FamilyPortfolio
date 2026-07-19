@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import secrets
 import time
@@ -9,6 +10,7 @@ import jwt
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -16,7 +18,15 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "")
 JWT_EXPIRY_SECONDS = 7 * 24 * 3600  # 7 days
 
 if not JWT_SECRET:
-    JWT_SECRET = secrets.token_hex(32)
+    DATA_DIR_INIT = Path(__file__).resolve().parent.parent.parent.parent / "data"
+    SECRET_FILE = DATA_DIR_INIT / ".jwt_secret"
+    if SECRET_FILE.exists():
+        JWT_SECRET = SECRET_FILE.read_text().strip()
+    else:
+        JWT_SECRET = secrets.token_hex(32)
+        SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SECRET_FILE.write_text(JWT_SECRET)
+        logger.warning("Generated and persisted JWT_SECRET to %s", SECRET_FILE)
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 CONFIG_PATH = DATA_DIR / "config.json"
@@ -93,7 +103,12 @@ async def google_login(body: GoogleLoginRequest):
         raise HTTPException(401, "Email not verified by Google")
 
     allowed = get_allowed_emails()
-    if allowed and email not in allowed:
+    if not allowed:
+        raise HTTPException(
+            403,
+            "No authorized emails configured. Add emails to data/config.json.",
+        )
+    if email not in allowed:
         raise HTTPException(
             403,
             "Access denied. Your email is not in the allowed list. "

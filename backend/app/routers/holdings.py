@@ -99,7 +99,7 @@ async def sell_lot(req: SellRequest, db: AsyncSession = Depends(get_db)):
         if not lot:
             raise HTTPException(status_code=404, detail="Lot not found")
 
-        if req.sell_qty > lot.buy_qty + 0.001:
+        if round(req.sell_qty, 4) > round(lot.buy_qty, 4):
             raise HTTPException(status_code=400, detail="Sell qty exceeds lot qty")
 
         sell_value = round(req.sell_qty * req.sell_rate, 2)
@@ -127,13 +127,15 @@ async def sell_lot(req: SellRequest, db: AsyncSession = Depends(get_db)):
         db.add(pnl)
 
         remaining_qty = round(lot.buy_qty - req.sell_qty, 4)
-        if remaining_qty < 0.001:
+        if remaining_qty <= 0:
             await db.delete(lot)
         else:
             lot.buy_qty = remaining_qty
             lot.buy_value = round(lot.buy_value - proportional_buy_value, 2)
 
-    await db.refresh(pnl)
+        await db.flush()
+        await db.refresh(pnl)
+
     return pnl
 
 
@@ -182,8 +184,10 @@ async def sell_group(req: SellGroupRequest, db: AsyncSession = Depends(get_db)):
             await db.delete(lot)
             results.append(pnl)
 
-    for pnl in results:
-        await db.refresh(pnl)
+        await db.flush()
+        for pnl in results:
+            await db.refresh(pnl)
+
     return results
 
 

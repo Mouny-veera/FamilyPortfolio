@@ -11,6 +11,8 @@ EnvironmentFile=/opt/familyportfolio/.env
 ExecStart=/opt/familyportfolio/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
+MemoryMax=512M
+MemoryHigh=400M
 
 [Install]
 WantedBy=multi-user.target
