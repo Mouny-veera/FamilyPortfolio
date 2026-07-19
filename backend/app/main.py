@@ -14,7 +14,7 @@ from .services.nse_master import refresh_nse_master_list
 from .services.fyers_auth import ensure_valid_token
 from .services.fyers_callback import start_callback_server, stop_callback_server
 
-FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Mani", "Devi"]
+FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Manikandan", "Devi"]
 
 
 async def seed_members():
