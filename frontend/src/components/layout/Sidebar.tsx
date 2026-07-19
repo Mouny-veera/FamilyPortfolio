@@ -32,7 +32,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation()
 
   useEffect(() => {
-    api.getMembers().then(setMembers).catch(console.error)
+    const fetchMembers = () => api.getMembers().then(setMembers).catch(console.error)
+    fetchMembers()
+    window.addEventListener("members-changed", fetchMembers)
+    return () => window.removeEventListener("members-changed", fetchMembers)
   }, [])
 
   useEffect(() => {

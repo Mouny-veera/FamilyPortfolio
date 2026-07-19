@@ -148,6 +148,9 @@ export interface ScanResult {
 export const api = {
   getMembers: () => request<Member[]>("/members"),
   getMember: (id: number) => request<Member>(`/members/${id}`),
+  createMember: (name: string) => request<Member>("/members", { method: "POST", body: JSON.stringify({ name }) }),
+  updateMember: (id: number, name: string) => request<Member>(`/members/${id}`, { method: "PUT", body: JSON.stringify({ name }) }),
+  deleteMember: (id: number) => request<{ status: string }>(`/members/${id}`, { method: "DELETE" }),
   getHoldings: (memberId: number) => request<MemberHoldings>(`/holdings/${memberId}`),
   addBuy: (data: {
     member_id: number

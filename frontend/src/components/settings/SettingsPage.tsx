@@ -1,6 +1,7 @@
 import { useState, useEffect, useId } from "react"
 import { api } from "@/lib/api"
 import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2 } from "lucide-react"
+import { MembersSection } from "./MembersSection"
 
 interface ProviderInfo {
   active: string
@@ -129,6 +130,9 @@ export function SettingsPage() {
       </h1>
 
       <div className="space-y-4">
+        {/* Members */}
+        <MembersSection />
+
         {/* Market Data */}
         <div className="rounded-xl p-5" style={cardStyle}>
           <div className="flex items-center gap-2 mb-4">

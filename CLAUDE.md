@@ -37,7 +37,7 @@ Frontend proxies `/api/*` to `http://localhost:8000` via Vite config.
 - **Lot-based tracking**: Each buy is a separate lot, NEVER merged. Sub-lots: 1, 1A, 1B per ticker per member.
 - **Financial year**: Apr 1+ = "{year}-{year+1}", before Apr = "{year-1}-{year}". Sell date determines P&L FY.
 - **Terminology**: Use "Invested" (NOT "Total Value") — this is a family convention.
-- **5 family members**: Veerakumar, Sneeha, Mouny, Mani, Devi (pre-seeded, do not add/remove).
+- **Dynamic members**: Members are managed via Settings > Family Members (add/edit/rename/delete). Initial seed: Veerakumar, Sneeha, Mouny, Manikandan, Devi. Users can add members for multiple demat accounts (e.g. "Mouny Axis", "Mouny HDFC").
 - **NSE tickers**: Store WITHOUT suffix in DB/UI. Add `.NS` for yfinance calls. For Fyers, use `get_fyers_symbol()` from `nse_master.py` to look up the correct series (e.g. `NSE:RELIANCE-EQ`, `NSE:FCSSOFT-BE`). Do NOT hardcode `-EQ` — symbols exist in multiple series (EQ, BE, ST, etc.).
 - **Selling**: Individual lots via `POST /api/holdings/sell`, or all lots of a ticker via `POST /api/holdings/sell-group`. Moves lot(s) from active holdings to realized_pnl table. Partial sells split the lot.
 - **Currency**: All prices in INR (₹) with Indian number formatting (en-IN locale).

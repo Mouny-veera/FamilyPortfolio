@@ -9,6 +9,14 @@ class MemberOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MemberCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=50, description="Member name")
+
+
+class MemberUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=50, description="Member name")
+
+
 class BuyRequest(BaseModel):
     member_id: int
     ticker: str
