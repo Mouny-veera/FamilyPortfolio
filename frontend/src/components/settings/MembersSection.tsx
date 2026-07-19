@@ -82,6 +82,7 @@ export function MembersSection() {
     setEditingId(member.id)
     setEditName(member.name)
     setShowAdd(false)
+    setDeleteConfirm(null)
     setError(null)
   }
 
@@ -109,14 +110,9 @@ export function MembersSection() {
         <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
           Family Members
         </h2>
-        <button
-          onClick={() => { setShowAdd(true); setEditingId(null); setError(null) }}
-          className="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[12px] font-medium cursor-pointer transition-all duration-150 hover:brightness-110 text-white"
-          style={{ background: "var(--gradient-accent)", boxShadow: "var(--shadow-accent)" }}
-        >
-          <Plus size={13} />
-          Add
-        </button>
+        <span className="text-[11px] font-medium ml-auto" style={{ color: "var(--text-muted)" }}>
+          {!loading && `${members.length} member${members.length !== 1 ? "s" : ""}`}
+        </span>
       </div>
 
       {error && (
@@ -135,15 +131,18 @@ export function MembersSection() {
           <span className="text-[12px]">Loading members...</span>
         </div>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {members.map((member) => (
             <div
               key={member.id}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg group"
-              style={{ backgroundColor: editingId === member.id ? "var(--bg-elevated)" : undefined }}
+              className="rounded-lg transition-all duration-150"
+              style={{
+                backgroundColor: editingId === member.id || deleteConfirm === member.id ? "var(--bg-elevated)" : undefined,
+                border: editingId === member.id || deleteConfirm === member.id ? "1px solid var(--border-subtle)" : "1px solid transparent",
+              }}
             >
               {editingId === member.id ? (
-                <>
+                <div className="px-3 py-2.5 space-y-2">
                   <input
                     type="text"
                     value={editName}
@@ -153,80 +152,86 @@ export function MembersSection() {
                       if (e.key === "Escape") cancelEdit()
                     }}
                     autoFocus
-                    className="flex-1 px-2 py-1 rounded-md text-[13px] bg-transparent outline-none"
-                    style={{ border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+                    className="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-transparent outline-none"
+                    style={{ border: "1px solid var(--color-accent)", color: "var(--text-primary)", boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.15)" }}
                     aria-label="Edit member name"
                   />
-                  <button
-                    onClick={() => handleEdit(member.id)}
-                    disabled={saving}
-                    className="p-1.5 rounded-md cursor-pointer transition-all duration-150"
-                    style={{ color: "var(--color-profit)" }}
-                    aria-label="Save"
-                  >
-                    <Check size={14} />
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    className="p-1.5 rounded-md cursor-pointer transition-all duration-150"
-                    style={{ color: "var(--text-muted)" }}
-                    aria-label="Cancel"
-                  >
-                    <X size={14} />
-                  </button>
-                </>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEdit(member.id)}
+                      disabled={saving || !editName.trim()}
+                      className="flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] rounded-md text-[11px] font-medium cursor-pointer transition-all duration-150 text-white disabled:opacity-40"
+                      style={{ background: "var(--gradient-accent)" }}
+                    >
+                      {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="px-2 py-1.5 min-h-[36px] rounded-md text-[11px] font-medium cursor-pointer transition-all duration-150"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : deleteConfirm === member.id ? (
-                <>
-                  <span className="flex-1 text-[12px]" style={{ color: "var(--color-loss)" }}>
-                    Delete "{member.name}"? This removes all their holdings and P&L data.
-                  </span>
-                  <button
-                    onClick={() => handleDelete(member.id)}
-                    disabled={saving}
-                    className="px-2 py-1 rounded-md text-[11px] font-medium cursor-pointer"
-                    style={{ backgroundColor: "rgba(244, 63, 94, 0.1)", color: "var(--color-loss)" }}
-                  >
-                    {saving ? "..." : "Yes, delete"}
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="px-2 py-1 rounded-md text-[11px] font-medium cursor-pointer"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    Cancel
-                  </button>
-                </>
+                <div className="px-3 py-2.5 space-y-2">
+                  <p className="text-[12px]" style={{ color: "var(--color-loss)" }}>
+                    Delete <strong>{member.name}</strong>? This removes all their holdings and P&L data.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDelete(member.id)}
+                      disabled={saving}
+                      className="flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] rounded-md text-[11px] font-medium cursor-pointer transition-all duration-150"
+                      style={{ backgroundColor: "rgba(244, 63, 94, 0.1)", color: "var(--color-loss)", border: "1px solid rgba(244, 63, 94, 0.2)" }}
+                    >
+                      {saving ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                      {saving ? "Deleting..." : "Yes, delete"}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      className="px-2.5 py-1.5 min-h-[36px] rounded-md text-[11px] font-medium cursor-pointer transition-all duration-150"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <span className="flex-1 text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
+                <div className="flex items-center gap-1 px-3 py-2">
+                  <span className="text-[13px] font-medium mr-2" style={{ color: "var(--text-primary)" }}>
                     {member.name}
                   </span>
                   <button
                     onClick={() => startEdit(member)}
-                    className="p-1.5 rounded-md cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-150"
+                    className="flex items-center gap-1 px-2 py-1 min-h-[32px] rounded-md text-[11px] cursor-pointer transition-all duration-150 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                     style={{ color: "var(--text-muted)" }}
                     aria-label={`Edit ${member.name}`}
                   >
-                    <Pencil size={13} />
+                    <Pencil size={11} />
+                    Edit
                   </button>
                   <button
-                    onClick={() => setDeleteConfirm(member.id)}
-                    className="p-1.5 rounded-md cursor-pointer opacity-0 group-hover:opacity-100 transition-all duration-150"
-                    style={{ color: "var(--color-loss)" }}
+                    onClick={() => { setDeleteConfirm(member.id); setEditingId(null) }}
+                    className="flex items-center gap-1 px-2 py-1 min-h-[32px] rounded-md text-[11px] cursor-pointer transition-all duration-150 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                    style={{ color: "var(--text-muted)" }}
                     aria-label={`Delete ${member.name}`}
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={11} />
+                    Delete
                   </button>
-                </>
+                </div>
               )}
             </div>
           ))}
 
-          {/* Add new member form */}
-          {showAdd && (
+          {/* Add new member */}
+          {showAdd ? (
             <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg animate-fade-in"
-              style={{ backgroundColor: "var(--bg-elevated)" }}
+              className="rounded-lg px-3 py-2.5 space-y-2 animate-fade-in"
+              style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
             >
               <input
                 id={`${uid}-new-member`}
@@ -239,28 +244,38 @@ export function MembersSection() {
                 }}
                 placeholder="e.g. Mouny Axis, Mouny HDFC"
                 autoFocus
-                className="flex-1 px-2 py-1 rounded-md text-[13px] bg-transparent outline-none"
-                style={{ border: "1px solid var(--border-color)", color: "var(--text-primary)" }}
+                className="w-full px-2.5 py-1.5 rounded-md text-[13px] bg-transparent outline-none"
+                style={{ border: "1px solid var(--color-accent)", color: "var(--text-primary)", boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.15)" }}
                 aria-label="New member name"
               />
-              <button
-                onClick={handleAdd}
-                disabled={saving || !newName.trim()}
-                className="p-1.5 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-40"
-                style={{ color: "var(--color-profit)" }}
-                aria-label="Add member"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              </button>
-              <button
-                onClick={() => { setShowAdd(false); setNewName(""); setError(null) }}
-                className="p-1.5 rounded-md cursor-pointer transition-all duration-150"
-                style={{ color: "var(--text-muted)" }}
-                aria-label="Cancel"
-              >
-                <X size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAdd}
+                  disabled={saving || !newName.trim()}
+                  className="flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] rounded-md text-[11px] font-medium cursor-pointer transition-all duration-150 text-white disabled:opacity-40"
+                  style={{ background: "var(--gradient-accent)" }}
+                >
+                  {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                  Add
+                </button>
+                <button
+                  onClick={() => { setShowAdd(false); setNewName(""); setError(null) }}
+                  className="px-2 py-1.5 min-h-[36px] rounded-md text-[11px] font-medium cursor-pointer transition-all duration-150"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
+          ) : (
+            <button
+              onClick={() => { setShowAdd(true); setEditingId(null); setDeleteConfirm(null); setError(null) }}
+              className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] w-full rounded-lg text-[12px] font-medium cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+              style={{ color: "var(--color-accent)", border: "1px dashed var(--border-color)" }}
+            >
+              <Plus size={14} />
+              Add new member
+            </button>
           )}
         </div>
       )}
