@@ -334,10 +334,6 @@ export function MembersSection() {
           )}
         </div>
       )}
-
-      <p className="text-[11px] mt-3.5" style={{ color: "var(--text-muted)" }}>
-        Add members for each demat account (e.g. "Mouny Axis", "Mouny HDFC"). Edit names anytime — holdings stay linked.
-      </p>
     </div>
   )
 }

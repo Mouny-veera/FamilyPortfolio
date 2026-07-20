@@ -10,12 +10,18 @@ from ..models import ScanResult
 from ..services.market_data import get_active_provider
 from .base_strategy import BaseStrategy
 from .fibonacci_strategy import FibonacciRetracementStrategy
+from .pivot_strategy import PivotPointStrategy
+from .macd_strategy import MACDStrategy
+from .rsi_strategy import RSIStrategy
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 NIFTY200_FILE = DATA_DIR / "nifty200.json"
 
 STRATEGIES: list[BaseStrategy] = [
     FibonacciRetracementStrategy(),
+    PivotPointStrategy(),
+    MACDStrategy(),
+    RSIStrategy(),
 ]
 
 _scan_lock = asyncio.Lock()
@@ -43,24 +49,27 @@ async def run_scan() -> list[dict]:
         results = []
         errors = 0
 
-        for strategy in STRATEGIES:
-            for ticker in universe:
-                try:
-                    ohlc = await provider.get_historical_ohlc(ticker, start, end)
-                    if ohlc is None:
-                        continue
-                    scan_score = await strategy.score(ticker, ohlc)
-                    if scan_score and scan_score.score > 0:
-                        results.append({
-                            "ticker": scan_score.ticker,
-                            "score": scan_score.score,
-                            "strategy_name": strategy.name,
-                            "metrics": scan_score.metrics,
-                        })
-                except Exception as e:
-                    errors += 1
-                    print(f"Scanner error for {ticker}: {e}")
-                await asyncio.sleep(0.5)
+        for ticker in universe:
+            try:
+                ohlc = await provider.get_historical_ohlc(ticker, start, end)
+                if ohlc is None:
+                    continue
+                for strategy in STRATEGIES:
+                    try:
+                        scan_score = await strategy.score(ticker, ohlc)
+                        if scan_score and scan_score.score > 0:
+                            results.append({
+                                "ticker": scan_score.ticker,
+                                "score": scan_score.score,
+                                "strategy_name": strategy.name,
+                                "metrics": scan_score.metrics,
+                            })
+                    except Exception as e:
+                        print(f"Scanner {strategy.name} error for {ticker}: {e}")
+            except Exception as e:
+                errors += 1
+                print(f"Scanner fetch error for {ticker}: {e}")
+            await asyncio.sleep(0.5)
 
         success_rate = (len(universe) - errors) / len(universe) if universe else 0
         if success_rate < 0.5 and results:

@@ -4,11 +4,21 @@ import { api, type ScanResult } from "@/lib/api"
 import { formatNumber } from "@/lib/utils"
 import { PageError } from "@/components/ui/PageError"
 
+type StrategyKey = "fibonacci_retracement" | "pivot_point" | "macd" | "rsi"
+
+const STRATEGY_TABS: { key: StrategyKey; label: string }[] = [
+  { key: "fibonacci_retracement", label: "Fibonacci" },
+  { key: "pivot_point", label: "Pivot Point" },
+  { key: "macd", label: "MACD" },
+  { key: "rsi", label: "RSI" },
+]
+
 export function ScannerPage() {
   const [results, setResults] = useState<ScanResult[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [activeTab, setActiveTab] = useState<StrategyKey>("fibonacci_retracement")
 
   const fetchResults = useCallback(() => {
     api.getScanResults()
@@ -17,9 +27,7 @@ export function ScannerPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => {
-    fetchResults()
-  }, [fetchResults])
+  useEffect(() => { fetchResults() }, [fetchResults])
 
   useEffect(() => {
     const handler = () => fetchResults()
@@ -40,6 +48,8 @@ export function ScannerPage() {
     }
   }
 
+  const filtered = results.filter((r) => r.strategy_name === activeTab)
+
   if (error && !scanning) {
     return <PageError error={error} onRetry={() => { setLoading(true); fetchResults() }} />
   }
@@ -52,7 +62,7 @@ export function ScannerPage() {
             Scanner
           </h1>
           <p className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-            Fibonacci retracement analysis (6-month) on Nifty 200
+            Technical analysis on Nifty 200 (6-month data)
           </p>
         </div>
         <button
@@ -107,81 +117,354 @@ export function ScannerPage() {
       )}
 
       {results.length > 0 && (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" }}
-        >
+        <>
+          {/* Strategy Tabs */}
           <div
-            className="px-5 py-3"
-            style={{ backgroundColor: "var(--bg-elevated)", borderBottom: "1px solid var(--border-subtle)" }}
+            className="flex gap-1 p-1 rounded-lg mb-4"
+            style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
           >
-            <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
-              Top Picks
-              <span className="font-normal ml-2 text-[11px]" style={{ color: "var(--text-muted)" }}>
-                {results.length} results
-              </span>
-            </h2>
-          </div>
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[780px]">
-              <thead>
-                <tr style={{ backgroundColor: "var(--bg-card)" }}>
-                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>#</th>
-                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Score</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>6M High</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>6M Low</th>
-                  <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Fib 0.618</th>
-                  <th className="text-center px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Signal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r, i) => {
-                  const m = (r.metrics || {}) as Record<string, unknown>
-                  return (
-                    <tr
-                      key={r.id}
-                      className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-                      style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+            {STRATEGY_TABS.map((tab) => {
+              const count = results.filter((r) => r.strategy_name === tab.key).length
+              const isActive = activeTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-md text-[12px] font-medium cursor-pointer transition-all duration-200 flex-1 justify-center"
+                  style={{
+                    backgroundColor: isActive ? "var(--bg-card)" : "transparent",
+                    color: isActive ? "var(--text-primary)" : "var(--text-muted)",
+                    boxShadow: isActive ? "var(--shadow-card)" : "none",
+                    border: isActive ? "1px solid var(--border-color)" : "1px solid transparent",
+                  }}
+                >
+                  {tab.label}
+                  {count > 0 && (
+                    <span
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                      style={{
+                        backgroundColor: isActive ? "rgba(16, 185, 129, 0.1)" : "var(--bg-secondary)",
+                        color: isActive ? "var(--color-profit)" : "var(--text-muted)",
+                      }}
                     >
-                      <td className="px-5 py-2.5 font-mono text-[11px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
-                      <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
-                      <td className="px-5 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap" style={{ color: "var(--color-profit)" }}>
-                        {r.score.toFixed(1)}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                        ₹{formatNumber(m.current as number)}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                        ₹{formatNumber(m.high_6m as number)}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                        ₹{formatNumber(m.low_6m as number)}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-                        ₹{formatNumber(m.fib_618 as number)}
-                      </td>
-                      <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                        {m.near_618 ? (
-                          <span
-                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold"
-                            style={{ backgroundColor: "rgba(245, 158, 11, 0.1)", color: "var(--color-warning)" }}
-                          >
-                            Near 0.618
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--text-muted)" }}>—</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
-        </div>
+
+          {/* Results Table */}
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" }}
+          >
+            <div
+              className="px-5 py-3"
+              style={{ backgroundColor: "var(--bg-elevated)", borderBottom: "1px solid var(--border-subtle)" }}
+            >
+              <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
+                {STRATEGY_TABS.find((t) => t.key === activeTab)?.label} Results
+                <span className="font-normal ml-2 text-[11px]" style={{ color: "var(--text-muted)" }}>
+                  {filtered.length} results
+                </span>
+              </h2>
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="text-center py-10" style={{ backgroundColor: "var(--bg-card)" }}>
+                <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+                  No results for this indicator. Run the scanner to generate data.
+                </p>
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto">
+                {activeTab === "fibonacci_retracement" && <FibTable results={filtered} />}
+                {activeTab === "pivot_point" && <PivotTable results={filtered} />}
+                {activeTab === "macd" && <MACDTable results={filtered} />}
+                {activeTab === "rsi" && <RSITable results={filtered} />}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
+  )
+}
+
+function TH({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" | "center" }) {
+  return (
+    <th
+      className={`text-${align} px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap`}
+      style={{ color: "var(--text-muted)" }}
+    >
+      {children}
+    </th>
+  )
+}
+
+function TD({ children, mono, align = "left", color }: { children: React.ReactNode; mono?: boolean; align?: "left" | "right" | "center"; color?: string }) {
+  return (
+    <td
+      className={`px-5 py-2.5 ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"} ${mono ? "font-mono tabular-nums" : ""} whitespace-nowrap`}
+      style={{ color: color || "var(--text-primary)" }}
+    >
+      {children}
+    </td>
+  )
+}
+
+function SignalBadge({ signal, variant }: { signal: string; variant: "bullish" | "bearish" | "neutral" | "warning" }) {
+  const colors = {
+    bullish: { bg: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" },
+    bearish: { bg: "rgba(244, 63, 94, 0.1)", color: "var(--color-loss)" },
+    neutral: { bg: "var(--bg-secondary)", color: "var(--text-muted)" },
+    warning: { bg: "rgba(245, 158, 11, 0.1)", color: "var(--color-warning)" },
+  }
+  const c = colors[variant]
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold"
+      style={{ backgroundColor: c.bg, color: c.color }}
+    >
+      {signal}
+    </span>
+  )
+}
+
+function FibTable({ results }: { results: ScanResult[] }) {
+  return (
+    <table className="w-full text-[13px] min-w-[780px]">
+      <thead>
+        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+          <TH>#</TH>
+          <TH>Ticker</TH>
+          <TH align="right">Score</TH>
+          <TH align="right">Current</TH>
+          <TH align="right">6M High</TH>
+          <TH align="right">6M Low</TH>
+          <TH align="right">Fib 0.618</TH>
+          <TH align="center">Signal</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {results.map((r, i) => {
+          const m = (r.metrics || {}) as Record<string, unknown>
+          return (
+            <tr
+              key={r.id}
+              className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+              style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+            >
+              <TD mono color="var(--text-muted)">{i + 1}</TD>
+              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
+              <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.high_6m as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.low_6m as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.fib_618 as number)}</TD>
+              <td className="px-5 py-2.5 text-center whitespace-nowrap">
+                {m.near_618 ? (
+                  <SignalBadge signal="Near 0.618" variant="warning" />
+                ) : (
+                  <span style={{ color: "var(--text-muted)" }}>—</span>
+                )}
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
+function PivotTable({ results }: { results: ScanResult[] }) {
+  return (
+    <table className="w-full text-[13px] min-w-[850px]">
+      <thead>
+        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+          <TH>#</TH>
+          <TH>Ticker</TH>
+          <TH align="right">Score</TH>
+          <TH align="right">Current</TH>
+          <TH align="right">Pivot</TH>
+          <TH align="right">S1</TH>
+          <TH align="right">S2</TH>
+          <TH align="right">R1</TH>
+          <TH align="right">R2</TH>
+          <TH align="center">Signal</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {results.map((r, i) => {
+          const m = (r.metrics || {}) as Record<string, unknown>
+          const signal = m.signal as string
+          const variant = signal === "near_s2" || signal === "near_s1" || signal === "below_pivot"
+            ? "bullish"
+            : signal === "near_r1" || signal === "above_pivot"
+              ? "neutral"
+              : "neutral"
+          const label = {
+            near_s2: "Near S2",
+            near_s1: "Near S1",
+            at_pivot: "At Pivot",
+            below_pivot: "Below Pivot",
+            above_pivot: "Above Pivot",
+            near_r1: "Near R1",
+            neutral: "Neutral",
+          }[signal] || signal
+          return (
+            <tr
+              key={r.id}
+              className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+              style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+            >
+              <TD mono color="var(--text-muted)">{i + 1}</TD>
+              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
+              <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.pivot as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.s1 as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.s2 as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.r1 as number)}</TD>
+              <TD mono align="right">₹{formatNumber(m.r2 as number)}</TD>
+              <td className="px-5 py-2.5 text-center whitespace-nowrap">
+                <SignalBadge signal={label} variant={variant} />
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
+function MACDTable({ results }: { results: ScanResult[] }) {
+  return (
+    <table className="w-full text-[13px] min-w-[780px]">
+      <thead>
+        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+          <TH>#</TH>
+          <TH>Ticker</TH>
+          <TH align="right">Score</TH>
+          <TH align="right">Current</TH>
+          <TH align="right">MACD</TH>
+          <TH align="right">Signal</TH>
+          <TH align="right">Histogram</TH>
+          <TH align="center">Trend</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {results.map((r, i) => {
+          const m = (r.metrics || {}) as Record<string, unknown>
+          const signal = m.signal as string
+          const variant = signal === "bullish_cross" || signal === "bullish_momentum"
+            ? "bullish"
+            : signal === "bearish_cross" || signal === "bearish_momentum"
+              ? "bearish"
+              : signal === "bullish_weakening"
+                ? "warning"
+                : "neutral"
+          const label = {
+            bullish_cross: "Bullish Cross",
+            bearish_cross: "Bearish Cross",
+            bullish_momentum: "Bullish",
+            bullish_weakening: "Weakening",
+            bearish_momentum: "Bearish",
+            bearish_weakening: "Recovering",
+            neutral: "Neutral",
+          }[signal] || signal
+          const histVal = m.histogram as number
+          const histColor = histVal > 0 ? "var(--color-profit)" : histVal < 0 ? "var(--color-loss)" : "var(--text-muted)"
+          return (
+            <tr
+              key={r.id}
+              className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+              style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+            >
+              <TD mono color="var(--text-muted)">{i + 1}</TD>
+              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
+              <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
+              <TD mono align="right">{(m.macd as number).toFixed(2)}</TD>
+              <TD mono align="right">{(m.signal_line as number).toFixed(2)}</TD>
+              <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: histColor }}>
+                {histVal > 0 ? "+" : ""}{histVal.toFixed(2)}
+              </td>
+              <td className="px-5 py-2.5 text-center whitespace-nowrap">
+                <SignalBadge signal={label} variant={variant} />
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
+function RSITable({ results }: { results: ScanResult[] }) {
+  return (
+    <table className="w-full text-[13px] min-w-[680px]">
+      <thead>
+        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+          <TH>#</TH>
+          <TH>Ticker</TH>
+          <TH align="right">Score</TH>
+          <TH align="right">Current</TH>
+          <TH align="right">RSI</TH>
+          <TH align="center">Trend</TH>
+          <TH align="center">Signal</TH>
+        </tr>
+      </thead>
+      <tbody>
+        {results.map((r, i) => {
+          const m = (r.metrics || {}) as Record<string, unknown>
+          const signal = m.signal as string
+          const rsiVal = m.rsi as number
+          const rsiColor = rsiVal <= 30 ? "var(--color-profit)" : rsiVal >= 70 ? "var(--color-loss)" : "var(--text-primary)"
+          const variant = signal === "oversold" || signal === "recovering"
+            ? "bullish"
+            : signal === "overbought"
+              ? "bearish"
+              : signal === "weak"
+                ? "warning"
+                : "neutral"
+          const label = {
+            oversold: "Oversold",
+            recovering: "Recovering",
+            weak: "Weak",
+            neutral: "Neutral",
+            strong: "Strong",
+            overbought: "Overbought",
+          }[signal] || signal
+          return (
+            <tr
+              key={r.id}
+              className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
+              style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
+            >
+              <TD mono color="var(--text-muted)">{i + 1}</TD>
+              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
+              <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
+              <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: rsiColor }}>
+                {rsiVal.toFixed(1)}
+              </td>
+              <td className="px-5 py-2.5 text-center whitespace-nowrap">
+                {m.rsi_rising ? (
+                  <span className="text-[11px] font-medium" style={{ color: "var(--color-profit)" }}>▲</span>
+                ) : (
+                  <span className="text-[11px] font-medium" style={{ color: "var(--color-loss)" }}>▼</span>
+                )}
+              </td>
+              <td className="px-5 py-2.5 text-center whitespace-nowrap">
+                <SignalBadge signal={label} variant={variant} />
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }
