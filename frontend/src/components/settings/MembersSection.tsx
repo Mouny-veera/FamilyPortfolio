@@ -1,5 +1,5 @@
 import { useState, useEffect, useId } from "react"
-import { Users, Plus, Pencil, Trash2, Check, X, Loader2, AlertTriangle } from "lucide-react"
+import { Users, Plus, Pencil, Trash2, Check, Loader2, AlertTriangle } from "lucide-react"
 import { api, type Member } from "@/lib/api"
 
 export function MembersSection() {
