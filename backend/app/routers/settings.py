@@ -31,6 +31,7 @@ async def get_data_provider():
     app_id = os.environ.get("FYERS_APP_ID", "")
     redirect_uri = os.environ.get("FYERS_REDIRECT_URI", "http://127.0.0.1:8901")
     auth_url = f"https://api-t1.fyers.in/api/v3/generate-authcode?client_id={app_id}&redirect_uri={redirect_uri}&response_type=code&state=none" if app_id else ""
+    needs_browser_login = bool(fyers_cfg.get("fy_id")) and not fyers_cfg.get("access_token")
     return {
         "active": active,
         "fyers_configured": bool(fyers_cfg.get("client_id")),
@@ -40,6 +41,7 @@ async def get_data_provider():
         "ticker_search_source": "Fyers Symbols Master",
         "scanner_universe": "Nifty 200 via Fyers API",
         "auth_url": auth_url,
+        "needs_browser_login": needs_browser_login,
     }
 
 
@@ -60,16 +62,10 @@ async def setup_fyers_auto_login(cfg: FyersLoginConfig):
             "message": "Auto-login configured and token generated! Token will refresh automatically on each app startup.",
         }
     else:
-        config = load_config()
-        fyers = config.get("fyers", {})
-        fyers.pop("totp_secret", None)
-        fyers.pop("pin", None)
-        fyers.pop("fy_id", None)
-        config["fyers"] = fyers
-        save_config(config)
         return {
-            "status": "error",
-            "message": f"Credentials failed: {result['message']}. Nothing was saved.",
+            "status": "ok",
+            "message": "Credentials saved. Click 'Login to Fyers' to complete the connection.",
+            "needs_browser_login": True,
         }
 
 
@@ -125,6 +121,27 @@ class ManualAuthCode(BaseModel):
 async def manual_token_from_auth_code(payload: ManualAuthCode):
     result = await exchange_auth_code(payload.auth_code)
     return result
+
+
+@router.get("/fyers/callback")
+async def fyers_callback(request: Request):
+    auth_code = request.query_params.get("auth_code", "")
+    if not auth_code:
+        return HTMLResponse(
+            '<html><body><h2>Login failed</h2><p>No auth code received.</p>'
+            '<a href="/settings">Back to Settings</a></body></html>',
+            status_code=400,
+        )
+    result = await exchange_auth_code(auth_code)
+    if result["status"] == "ok":
+        return HTMLResponse(
+            '<html><body><script>window.location.href="/settings?fyers=connected";</script></body></html>'
+        )
+    return HTMLResponse(
+        f'<html><body><h2>Token exchange failed</h2><p>{result["message"]}</p>'
+        f'<a href="/settings">Back to Settings</a></body></html>',
+        status_code=500,
+    )
 
 
 @router.delete("/fyers")

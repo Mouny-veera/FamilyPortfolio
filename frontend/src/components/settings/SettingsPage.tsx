@@ -10,6 +10,7 @@ interface ProviderInfo {
   fyers_fy_id: string
   auto_login: boolean
   auth_url?: string
+  needs_browser_login?: boolean
 }
 
 export function SettingsPage() {
@@ -41,6 +42,11 @@ export function SettingsPage() {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("fyers") === "connected") {
+      setFyersMsg({ type: "ok", text: "Fyers connected successfully! Real-time prices are now active." })
+      window.history.replaceState({}, "", "/settings")
+    }
     api.getDataProvider().then((info) => {
       setProviderInfo(info)
       if (info.active === "fyers") {
@@ -91,7 +97,10 @@ export function SettingsPage() {
         setShowFyersForm(false)
         setFyerPin("")
         setTotpSecret("")
-        api.getDataProvider().then(setProviderInfo)
+        api.getDataProvider().then((info) => {
+          setProviderInfo(info)
+          if (info.active === "fyers") checkTokenStatus()
+        })
       } else {
         setFyersMsg({ type: "error", text: result.message })
       }
@@ -293,8 +302,44 @@ export function SettingsPage() {
             </div>
           )}
 
+          {/* Credentials saved but needs browser login */}
+          {providerInfo?.active !== "fyers" && providerInfo?.needs_browser_login && !showFyersForm && (
+            <div className="space-y-3 mb-3">
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px]"
+                style={{ backgroundColor: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.15)" }}
+              >
+                <AlertTriangle size={14} strokeWidth={2} style={{ color: "var(--color-amber)" }} />
+                <span style={{ color: "var(--text-primary)" }}>
+                  Credentials saved as <span className="font-mono font-medium">{providerInfo.fyers_fy_id}</span> — one more step to connect.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {providerInfo.auth_url && (
+                  <a
+                    href={providerInfo.auth_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[13px] px-3.5 py-2 rounded-lg font-medium text-white no-underline cursor-pointer transition-all duration-200 hover:brightness-110"
+                    style={{ background: "var(--gradient-accent)", boxShadow: "var(--shadow-accent)" }}
+                  >
+                    <KeyRound size={14} />
+                    Login to Fyers
+                  </a>
+                )}
+                <button
+                  onClick={handleFyersRemove}
+                  className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
+                  style={{ color: "var(--color-loss)", border: "1px solid rgba(244, 63, 94, 0.3)" }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Not connected — show setup button */}
-          {providerInfo?.active !== "fyers" && !showFyersForm && (
+          {providerInfo?.active !== "fyers" && !providerInfo?.needs_browser_login && !showFyersForm && (
             <button
               onClick={() => setShowFyersForm(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
