@@ -22,7 +22,7 @@ if not API_TOKEN and not GOOGLE_AUTH_ENABLED:
 
 _bearer = HTTPBearer(auto_error=False)
 
-PUBLIC_PATHS = {"/api/health", "/api/auth/google"}
+PUBLIC_PATHS = {"/api/health", "/api/auth/google", "/api/settings/fyers/callback"}
 
 
 async def require_auth(
