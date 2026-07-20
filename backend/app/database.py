@@ -26,7 +26,7 @@ async def get_db():
         yield session
 
 
-def backup_database(keep_days: int = 7):
+def backup_database(max_backups: int = 10):
     if not DB_PATH.exists():
         return
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -34,10 +34,9 @@ def backup_database(keep_days: int = 7):
     shutil.copy2(DB_PATH, dest)
     print(f"Database backup: {dest.name}")
 
-    cutoff = datetime.now().timestamp() - (keep_days * 86400)
-    for old in sorted(BACKUP_DIR.glob("portfolio_*.db")):
-        if old.stat().st_mtime < cutoff:
-            old.unlink()
+    backups = sorted(BACKUP_DIR.glob("portfolio_*.db"), key=lambda p: p.stat().st_mtime)
+    while len(backups) > max_backups:
+        backups.pop(0).unlink()
 
 
 async def init_db():
