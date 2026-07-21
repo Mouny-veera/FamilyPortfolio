@@ -84,7 +84,7 @@ export function ScannerPage() {
           className="text-center py-12 rounded-xl mb-4"
           style={{ border: "1px solid var(--border-color)", backgroundColor: "var(--bg-card)", boxShadow: "var(--shadow-card)" }}
         >
-          <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: "rgba(16, 185, 129, 0.3)", borderTopColor: "var(--color-profit)" }} />
+          <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: "var(--accent-15)", borderTopColor: "var(--color-profit)" }} />
           <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
             Scanning stocks...
           </p>
@@ -121,6 +121,8 @@ export function ScannerPage() {
           {/* Strategy Tabs */}
           <div
             className="flex gap-1 p-1 rounded-lg mb-4"
+            role="tablist"
+            aria-label="Scanner strategies"
             style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
           >
             {STRATEGY_TABS.map((tab) => {
@@ -129,8 +131,11 @@ export function ScannerPage() {
               return (
                 <button
                   key={tab.key}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`tabpanel-${tab.key}`}
                   onClick={() => setActiveTab(tab.key)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-md text-[12px] font-medium cursor-pointer transition-all duration-200 flex-1 justify-center"
+                  className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] lg:min-h-0 rounded-md text-[12px] font-medium cursor-pointer transition-all duration-200 flex-1 justify-center"
                   style={{
                     backgroundColor: isActive ? "var(--bg-card)" : "transparent",
                     color: isActive ? "var(--text-primary)" : "var(--text-muted)",
@@ -143,7 +148,7 @@ export function ScannerPage() {
                     <span
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
                       style={{
-                        backgroundColor: isActive ? "rgba(16, 185, 129, 0.1)" : "var(--bg-secondary)",
+                        backgroundColor: isActive ? "var(--accent-10)" : "var(--bg-secondary)",
                         color: isActive ? "var(--color-profit)" : "var(--text-muted)",
                       }}
                     >
@@ -179,7 +184,7 @@ export function ScannerPage() {
                 </p>
               </div>
             ) : (
-              <div className="w-full overflow-x-auto">
+              <div className="w-full overflow-x-auto" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={activeTab}>
                 {activeTab === "fibonacci_retracement" && <FibTable results={filtered} />}
                 {activeTab === "pivot_point" && <PivotTable results={filtered} />}
                 {activeTab === "macd" && <MACDTable results={filtered} />}
@@ -196,6 +201,7 @@ export function ScannerPage() {
 function TH({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" | "center" }) {
   return (
     <th
+      scope="col"
       className={`text-${align} px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap`}
       style={{ color: "var(--text-muted)" }}
     >
@@ -217,10 +223,10 @@ function TD({ children, mono, align = "left", color }: { children: React.ReactNo
 
 function SignalBadge({ signal, variant }: { signal: string; variant: "bullish" | "bearish" | "neutral" | "warning" }) {
   const colors = {
-    bullish: { bg: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" },
-    bearish: { bg: "rgba(244, 63, 94, 0.1)", color: "var(--color-loss)" },
+    bullish: { bg: "var(--accent-10)", color: "var(--color-profit)" },
+    bearish: { bg: "var(--loss-10)", color: "var(--color-loss)" },
     neutral: { bg: "var(--bg-secondary)", color: "var(--text-muted)" },
-    warning: { bg: "rgba(245, 158, 11, 0.1)", color: "var(--color-warning)" },
+    warning: { bg: "var(--warning-10)", color: "var(--color-warning)" },
   }
   const c = colors[variant]
   return (

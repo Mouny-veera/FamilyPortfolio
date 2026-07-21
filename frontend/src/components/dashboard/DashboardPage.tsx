@@ -69,8 +69,8 @@ export function DashboardPage() {
         <div
           className="w-12 h-12 rounded-xl flex items-center justify-center"
           style={{
-            background: "linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 100%)",
-            border: "1px solid rgba(244, 63, 94, 0.15)",
+            background: "var(--loss-gradient-12)",
+            border: "1px solid var(--loss-15)",
           }}
         >
           <WifiOff size={22} strokeWidth={1.5} style={{ color: "var(--color-loss)" }} />
@@ -88,7 +88,7 @@ export function DashboardPage() {
         <div className="flex items-center gap-2.5 mt-1">
           <button
             onClick={() => { setLoading(true); fetchData() }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] lg:min-h-0 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150"
             style={{ background: "var(--gradient-accent)" }}
           >
             <RefreshCw size={13} strokeWidth={2} />
@@ -96,7 +96,7 @@ export function DashboardPage() {
           </button>
           <button
             onClick={() => navigate("/settings")}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] lg:min-h-0 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150"
             style={{
               color: "var(--text-secondary)",
               border: "1px solid var(--border-color)",
@@ -115,16 +115,16 @@ export function DashboardPage() {
       label: "Total Invested",
       value: formatCurrency(data.total_invested),
       icon: Wallet,
-      gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 60%)",
-      borderAccent: "rgba(16, 185, 129, 0.15)",
+      gradient: "var(--accent-gradient-08)",
+      borderAccent: "var(--accent-15)",
       iconColor: "var(--color-profit)",
     },
     {
       label: "Current Value",
       value: formatCurrency(data.total_current_value),
       icon: BarChart3,
-      gradient: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 60%)",
-      borderAccent: "rgba(99, 102, 241, 0.15)",
+      gradient: "var(--info-gradient-08)",
+      borderAccent: "var(--info-15)",
       iconColor: "var(--color-info)",
     },
     {
@@ -134,11 +134,11 @@ export function DashboardPage() {
       color: data.total_pnl != null ? (data.total_pnl >= 0 ? "var(--color-profit)" : "var(--color-loss)") : undefined,
       icon: TrendingUp,
       gradient: data.total_pnl != null && data.total_pnl >= 0
-        ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 60%)"
-        : "linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0) 60%)",
+        ? "var(--accent-gradient-08)"
+        : "var(--loss-gradient-08)",
       borderAccent: data.total_pnl != null && data.total_pnl >= 0
-        ? "rgba(16, 185, 129, 0.15)"
-        : "rgba(244, 63, 94, 0.15)",
+        ? "var(--accent-15)"
+        : "var(--loss-15)",
       iconColor: data.total_pnl != null && data.total_pnl >= 0 ? "var(--color-profit)" : "var(--color-loss)",
     },
     {
@@ -146,8 +146,8 @@ export function DashboardPage() {
       value: data.active_alerts.toString(),
       isCount: true,
       icon: AlertTriangle,
-      gradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0) 60%)",
-      borderAccent: "rgba(245, 158, 11, 0.12)",
+      gradient: "var(--warning-gradient-06)",
+      borderAccent: "var(--warning-12)",
       iconColor: "var(--color-warning)",
       href: "/alerts",
     },
@@ -227,26 +227,32 @@ export function DashboardPage() {
           <table className="w-full text-[13px] min-w-[640px]">
             <thead>
               <tr style={{ backgroundColor: "var(--bg-card)" }}>
-                <th className="text-left px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Member</th>
-                <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Invested</th>
-                <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current Value</th>
-                <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</th>
-                <th className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Alerts</th>
-                <th className="w-8" />
+                <th scope="col" className="text-left px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Member</th>
+                <th scope="col" className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Invested</th>
+                <th scope="col" className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current Value</th>
+                <th scope="col" className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</th>
+                <th scope="col" className="text-right px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Alerts</th>
+                <th scope="col" className="w-8" />
               </tr>
             </thead>
             <tbody>
               {data.members.map((m, i) => (
                 <tr
                   key={m.member.id}
-                  className="group cursor-pointer transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2"
+                  className="group cursor-pointer transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
                   style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
-                  tabIndex={0}
-                  role="link"
                   onClick={() => navigate(`/holdings/${m.member.id}`)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/holdings/${m.member.id}`) } }}
                 >
-                  <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{m.member.name}</td>
+                  <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
+                    <a
+                      href={`/holdings/${m.member.id}`}
+                      onClick={(e) => { e.preventDefault() }}
+                      className="focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2 rounded"
+                      style={{ color: "inherit", textDecoration: "none" }}
+                    >
+                      {m.member.name}
+                    </a>
+                  </td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(m.invested)}</td>
                   <td className="px-5 py-3.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(m.current_value)}</td>
                   <td
@@ -259,7 +265,7 @@ export function DashboardPage() {
                     {m.alert_count > 0 ? (
                       <span
                         className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold animate-pulse-subtle"
-                        style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+                        style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}
                       >
                         {m.alert_count}
                       </span>

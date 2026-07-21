@@ -254,16 +254,16 @@ export function HoldingsPage() {
               <table className="w-full text-[13px] min-w-[900px]">
                 <thead>
                   <tr style={{ backgroundColor: "var(--bg-elevated)" }}>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Date</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Qty</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Rate</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Value</th>
-                    <th className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Date</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Rate</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Value</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</th>
-                    <th className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>%</th>
+                    <th scope="col" className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
+                    <th scope="col" className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Date</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Qty</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Rate</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Value</th>
+                    <th scope="col" className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Date</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Rate</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Value</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</th>
+                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>%</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -297,7 +297,7 @@ export function HoldingsPage() {
                             className={`font-mono font-semibold tabular-nums ${isProfitAlert ? "inline-flex items-center px-1.5 py-0.5 rounded-md" : ""}`}
                             style={{
                               color: pnl.profit_loss_pct >= 0 ? "var(--color-profit)" : "var(--color-loss)",
-                              backgroundColor: isProfitAlert ? "rgba(16, 185, 129, 0.1)" : undefined,
+                              backgroundColor: isProfitAlert ? "var(--accent-10)" : undefined,
                             }}
                           >
                             {formatPct(pnl.profit_loss_pct)}

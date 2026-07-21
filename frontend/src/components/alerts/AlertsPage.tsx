@@ -48,7 +48,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
           </span>
           <span
             className="text-[10px] font-medium px-1.5 py-0.5 rounded-md shrink-0"
-            style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+            style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}
           >
             {group.alerts.length} alert{group.alerts.length !== 1 ? "s" : ""}
           </span>
@@ -77,7 +77,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
             <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Profit %</p>
             <span
               className="inline-flex items-center gap-1 font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded-md text-[12px]"
-              style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+              style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}
             >
               <TrendingUp size={10} strokeWidth={2.5} />
               {formatPct(group.profitPct)}
@@ -112,7 +112,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                       </p>
                       <span
                         className="inline-flex items-center gap-0.5 font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded-md text-[11px] mt-0.5"
-                        style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+                        style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}
                       >
                         <TrendingUp size={9} strokeWidth={2.5} />
                         {formatPct(alert.profit_pct)}
@@ -124,7 +124,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                       className="px-2.5 py-1.5 min-h-[44px] rounded-md text-[11px] font-semibold cursor-pointer transition-all duration-150"
                       style={{
                         color: sellingTicker === alert.ticker ? "white" : "var(--color-loss)",
-                        border: "1px solid rgba(244, 63, 94, 0.3)",
+                        border: "1px solid var(--loss-30)",
                         backgroundColor: sellingTicker === alert.ticker ? "var(--color-loss)" : "transparent",
                       }}
                     >
@@ -141,14 +141,14 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
             <table className="w-full text-[13px]">
               <thead>
                 <tr style={{ backgroundColor: "var(--bg-card)" }}>
-                  <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Value</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>CMP</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current Value</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Profit</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Profit %</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}></th>
+                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Value</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>CMP</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current Value</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Profit</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Profit %</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -171,7 +171,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
                       <span
                         className="inline-flex items-center gap-1 font-mono font-semibold tabular-nums px-1.5 py-0.5 rounded-md text-[12px]"
-                        style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+                        style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}
                       >
                         <TrendingUp size={10} strokeWidth={2.5} />
                         {formatPct(alert.profit_pct)}
@@ -184,7 +184,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                         className="px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer transition-all duration-150"
                         style={{
                           color: sellingTicker === alert.ticker ? "white" : "var(--color-loss)",
-                          border: "1px solid rgba(244, 63, 94, 0.3)",
+                          border: "1px solid var(--loss-30)",
                           backgroundColor: sellingTicker === alert.ticker ? "var(--color-loss)" : "transparent",
                         }}
                       >
@@ -329,7 +329,7 @@ export function AlertsPage() {
         {alerts.length > 0 && (
           <span
             className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-lg"
-            style={{ backgroundColor: "rgba(16, 185, 129, 0.1)", color: "var(--color-profit)" }}
+            style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}
           >
             <TrendingUp size={13} strokeWidth={2.5} />
             {alerts.length} stock{alerts.length !== 1 ? "s" : ""} at ≥10%
@@ -349,8 +349,8 @@ export function AlertsPage() {
           <div
             className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
             style={{
-              background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 100%)",
-              border: "1px solid rgba(245, 158, 11, 0.15)",
+              background: "var(--warning-gradient-12)",
+              border: "1px solid var(--warning-15)",
             }}
           >
             <Bell size={22} strokeWidth={1.5} style={{ color: "var(--color-warning)" }} />

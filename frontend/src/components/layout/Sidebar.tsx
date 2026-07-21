@@ -89,6 +89,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 <button
                   onClick={() => setHoldingsOpen(!holdingsOpen)}
                   aria-expanded={holdingsOpen}
+                  aria-controls="holdings-submenu"
                   className={cn(
                     "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150",
                     isActive
@@ -109,7 +110,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                   />
                 </button>
                 {holdingsOpen && (
-                  <div className="ml-[26px] mt-0.5 space-y-0.5 border-l pl-2.5" style={{ borderColor: "var(--border-subtle)" }}>
+                  <div id="holdings-submenu" className="ml-[26px] mt-0.5 space-y-0.5 border-l pl-2.5" style={{ borderColor: "var(--border-subtle)" }}>
                     {members.map((m) => (
                       <NavLink
                         key={m.id}
@@ -191,14 +192,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 animate-backdrop-in"
+          <button
+            type="button"
+            className="absolute inset-0 animate-backdrop-in w-full border-none cursor-default"
             style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", backdropFilter: "blur(4px)" }}
-            role="button"
-            tabIndex={0}
             aria-label="Close menu"
             onClick={onMobileClose}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onMobileClose() } }}
           />
           <aside
             className="absolute left-0 top-0 h-full w-[280px] flex flex-col overflow-y-auto animate-slide-in-left"

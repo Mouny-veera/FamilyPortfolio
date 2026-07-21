@@ -160,6 +160,10 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
   }, [onClose])
 
   useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       if (abortRef.current) abortRef.current.abort()

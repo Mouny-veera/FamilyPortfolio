@@ -40,7 +40,7 @@ export function SubmitButton({
       type={onClick ? "button" : "submit"}
       onClick={onClick}
       disabled={loading}
-      className={`${fullWidth ? "w-full" : ""} px-4 py-2 min-h-[44px] sm:min-h-0 rounded-lg text-[12px] font-semibold text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed`}
+      className={`${fullWidth ? "w-full" : ""} px-4 py-2 min-h-[44px] lg:min-h-0 rounded-lg text-[12px] font-semibold text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed`}
       style={{
         background: isDestructive
           ? "var(--gradient-destructive)"
@@ -56,4 +56,4 @@ export function SubmitButton({
 }
 
 export const INLINE_INPUT_CLASSES =
-  "w-full px-2.5 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg text-[12px] bg-transparent font-mono tabular-nums transition-all duration-150 outline-none"
+  "w-full px-2.5 py-2.5 lg:py-1.5 min-h-[44px] lg:min-h-0 rounded-lg text-[12px] bg-transparent font-mono tabular-nums transition-all duration-150 outline-none"

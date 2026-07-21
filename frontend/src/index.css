@@ -29,6 +29,25 @@
   --color-warning: #F59E0B;
   --alert-row-bg: rgba(16, 185, 129, 0.04);
   --alert-row-border: rgba(16, 185, 129, 0.12);
+  --accent-10: rgba(16, 185, 129, 0.1);
+  --accent-12: rgba(16, 185, 129, 0.12);
+  --accent-15: rgba(16, 185, 129, 0.15);
+  --loss-10: rgba(244, 63, 94, 0.1);
+  --loss-15: rgba(244, 63, 94, 0.15);
+  --loss-30: rgba(244, 63, 94, 0.3);
+  --warning-04: rgba(245, 158, 11, 0.04);
+  --warning-10: rgba(245, 158, 11, 0.1);
+  --warning-12: rgba(245, 158, 11, 0.12);
+  --warning-15: rgba(245, 158, 11, 0.15);
+  --info-08: rgba(99, 102, 241, 0.08);
+  --info-15: rgba(99, 102, 241, 0.15);
+  --accent-gradient-08: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 60%);
+  --loss-gradient-08: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0) 60%);
+  --info-gradient-08: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 60%);
+  --warning-gradient-06: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0) 60%);
+  --loss-gradient-12: linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 100%);
+  --warning-gradient-12: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 100%);
+  --focus-ring: 0 0 0 2px rgba(16, 185, 129, 0.15);
   --gradient-accent: linear-gradient(135deg, #10B981 0%, #059669 100%);
   --gradient-destructive: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
   --gradient-info: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
@@ -56,6 +75,25 @@
   --color-loss: #F43F5E;
   --alert-row-bg: rgba(16, 185, 129, 0.06);
   --alert-row-border: rgba(16, 185, 129, 0.15);
+  --accent-10: rgba(16, 185, 129, 0.12);
+  --accent-12: rgba(16, 185, 129, 0.15);
+  --accent-15: rgba(16, 185, 129, 0.18);
+  --loss-10: rgba(244, 63, 94, 0.12);
+  --loss-15: rgba(244, 63, 94, 0.18);
+  --loss-30: rgba(244, 63, 94, 0.35);
+  --warning-04: rgba(245, 158, 11, 0.06);
+  --warning-10: rgba(245, 158, 11, 0.12);
+  --warning-12: rgba(245, 158, 11, 0.15);
+  --warning-15: rgba(245, 158, 11, 0.18);
+  --info-08: rgba(99, 102, 241, 0.1);
+  --info-15: rgba(99, 102, 241, 0.18);
+  --accent-gradient-08: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0) 60%);
+  --loss-gradient-08: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, rgba(244, 63, 94, 0) 60%);
+  --info-gradient-08: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 60%);
+  --warning-gradient-06: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0) 60%);
+  --loss-gradient-12: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0) 100%);
+  --warning-gradient-12: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0) 100%);
+  --focus-ring: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -77,6 +115,25 @@
     --color-loss: #F43F5E;
     --alert-row-bg: rgba(16, 185, 129, 0.06);
     --alert-row-border: rgba(16, 185, 129, 0.15);
+    --accent-10: rgba(16, 185, 129, 0.12);
+    --accent-12: rgba(16, 185, 129, 0.15);
+    --accent-15: rgba(16, 185, 129, 0.18);
+    --loss-10: rgba(244, 63, 94, 0.12);
+    --loss-15: rgba(244, 63, 94, 0.18);
+    --loss-30: rgba(244, 63, 94, 0.35);
+    --warning-04: rgba(245, 158, 11, 0.06);
+    --warning-10: rgba(245, 158, 11, 0.12);
+    --warning-12: rgba(245, 158, 11, 0.15);
+    --warning-15: rgba(245, 158, 11, 0.18);
+    --info-08: rgba(99, 102, 241, 0.1);
+    --info-15: rgba(99, 102, 241, 0.18);
+    --accent-gradient-08: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0) 60%);
+    --loss-gradient-08: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, rgba(244, 63, 94, 0) 60%);
+    --info-gradient-08: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 60%);
+    --warning-gradient-06: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0) 60%);
+    --loss-gradient-12: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0) 100%);
+    --warning-gradient-12: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0) 100%);
+    --focus-ring: 0 0 0 2px rgba(16, 185, 129, 0.2);
   }
 }
 
@@ -119,8 +176,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 input:focus,
 select:focus {
-  border-color: var(--color-accent) !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
 }
 
 button:focus-visible,

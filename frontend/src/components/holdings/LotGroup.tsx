@@ -52,7 +52,7 @@ function RemapBar({
     <div
       className="px-4 py-2.5 flex items-center gap-3 flex-wrap"
       style={{
-        backgroundColor: "rgba(245, 158, 11, 0.04)",
+        backgroundColor: "var(--warning-04)",
         borderTop: "1px solid var(--border-subtle)",
       }}
     >
@@ -64,7 +64,7 @@ function RemapBar({
           key={s.symbol}
           onClick={() => onRemap(s.symbol)}
           disabled={remapping}
-          className="text-[11px] px-2.5 py-1 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-[11px] px-2.5 py-1 min-h-[44px] lg:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             backgroundColor: "var(--bg-card)",
             border: "1px solid var(--border-color)",
@@ -93,7 +93,7 @@ function RemapBar({
             placeholder="Search NSE symbol..."
             aria-label="Search NSE symbol for remapping"
             disabled={remapping}
-            className="text-[11px] pl-7 pr-2 py-1.5 min-h-[44px] sm:min-h-0 rounded-md bg-transparent outline-none w-40 disabled:opacity-40"
+            className="text-[11px] pl-7 pr-2 py-1.5 min-h-[44px] lg:min-h-0 rounded-md bg-transparent outline-none w-40 disabled:opacity-40"
             style={{
               border: "1px solid var(--border-color)",
               color: "var(--text-primary)",
@@ -114,7 +114,7 @@ function RemapBar({
                 key={r.symbol}
                 type="button"
                 onClick={() => { onRemap(r.symbol); setShowDrop(false); setQuery("") }}
-                className="w-full text-left px-3 py-2 min-h-[44px] sm:min-h-0 cursor-pointer transition-colors duration-75 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+                className="w-full text-left px-3 py-2 min-h-[44px] lg:min-h-0 cursor-pointer transition-colors duration-75 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                 style={{ borderBottom: "1px solid var(--border-subtle)" }}
               >
                 <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>
@@ -180,6 +180,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
         <button
           onClick={() => setOpen(!open)}
           aria-expanded={open}
+          aria-controls={`lotgroup-${group.ticker}`}
           className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0"
         >
           <ChevronRight
@@ -197,7 +198,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           {isUnmatched && (
             <span
               className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
-              style={{ backgroundColor: "rgba(245, 158, 11, 0.12)", color: "var(--color-amber)" }}
+              style={{ backgroundColor: "var(--warning-12)", color: "var(--color-amber)" }}
             >
               <AlertTriangle size={10} strokeWidth={2.5} />
               Unmatched
@@ -212,7 +213,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           {group.scanner_badge && (
             <span
               className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold"
-              style={{ backgroundColor: "rgba(245, 158, 11, 0.1)", color: "var(--color-amber)" }}
+              style={{ backgroundColor: "var(--warning-10)", color: "var(--color-amber)" }}
             >
               {group.scanner_badge}
             </span>
@@ -220,7 +221,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           {isAlert && (
             <span
               className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold animate-pulse-subtle"
-              style={{ backgroundColor: "rgba(16, 185, 129, 0.12)", color: "var(--color-profit)" }}
+              style={{ backgroundColor: "var(--accent-12)", color: "var(--color-profit)" }}
             >
               <TrendingUp size={10} strokeWidth={2.5} />
               ≥10% Profit
@@ -258,7 +259,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                   )}
                   style={{
                     color: (group.unrealized_pnl_pct ?? 0) >= 0 ? "var(--color-profit)" : "var(--color-loss)",
-                    backgroundColor: isAlert ? "rgba(16, 185, 129, 0.1)" : undefined,
+                    backgroundColor: isAlert ? "var(--accent-10)" : undefined,
                   }}
                 >
                   {formatPct(group.unrealized_pnl_pct)}
@@ -284,11 +285,12 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                 setSellingGroup(!sellingGroup)
                 setSellingLotId(null)
               }}
-              className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
+              aria-label={sellingGroup ? `Cancel selling ${group.ticker}` : `Sell all ${group.ticker}`}
+              className="text-[11px] px-2.5 py-1.5 min-h-[44px] lg:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
               style={{
                 color: sellingGroup ? "white" : "var(--color-loss)",
                 backgroundColor: sellingGroup ? "var(--color-loss)" : "transparent",
-                border: `1px solid ${sellingGroup ? "var(--color-loss)" : "rgba(244, 63, 94, 0.3)"}`,
+                border: `1px solid ${sellingGroup ? "var(--color-loss)" : "var(--loss-30)"}`,
               }}
             >
               {sellingGroup ? "Cancel" : "Sell All"}
@@ -310,6 +312,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           <button
             onClick={() => setOpen(!open)}
             aria-expanded={open}
+            aria-controls={`lotgroup-${group.ticker}`}
             className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
           >
             <ChevronRight
@@ -327,7 +330,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
             {isUnmatched && (
               <span
                 className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
-                style={{ backgroundColor: "rgba(245, 158, 11, 0.12)", color: "var(--color-amber)" }}
+                style={{ backgroundColor: "var(--warning-12)", color: "var(--color-amber)" }}
               >
                 <AlertTriangle size={10} strokeWidth={2.5} />
                 Unmatched
@@ -341,11 +344,12 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
               setSellingGroup(!sellingGroup)
               setSellingLotId(null)
             }}
-            className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200 shrink-0 ml-2"
+            aria-label={sellingGroup ? `Cancel selling ${group.ticker}` : `Sell all ${group.ticker}`}
+            className="text-[11px] px-2.5 py-1.5 min-h-[44px] lg:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200 shrink-0 ml-2"
             style={{
               color: sellingGroup ? "white" : "var(--color-loss)",
               backgroundColor: sellingGroup ? "var(--color-loss)" : "transparent",
-              border: `1px solid ${sellingGroup ? "var(--color-loss)" : "rgba(244, 63, 94, 0.3)"}`,
+              border: `1px solid ${sellingGroup ? "var(--color-loss)" : "var(--loss-30)"}`,
             }}
           >
             {sellingGroup ? "Cancel" : "Sell All"}
@@ -382,7 +386,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                   )}
                   style={{
                     color: (group.unrealized_pnl_pct ?? 0) >= 0 ? "var(--color-profit)" : "var(--color-loss)",
-                    backgroundColor: isAlert ? "rgba(16, 185, 129, 0.1)" : undefined,
+                    backgroundColor: isAlert ? "var(--accent-10)" : undefined,
                   }}
                 >
                   {formatPct(group.unrealized_pnl_pct)}
@@ -425,17 +429,17 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
       )}
 
       {open && (
-        <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        <div id={`lotgroup-${group.ticker}`} style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <div className="w-full overflow-x-auto">
             <table className="w-full text-[13px] min-w-[520px]">
               <thead>
                 <tr style={{ backgroundColor: "var(--bg-card)" }}>
-                  <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>S.No</th>
-                  <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Date</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Rate</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Value</th>
-                  <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Action</th>
+                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>S.No</th>
+                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Date</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Rate</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Value</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -461,11 +465,11 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                               setDeletingLotId(null)
                             }}
                             aria-label={editingLotId === lot.id ? `Cancel editing ${group.ticker}` : `Edit ${group.ticker} lot ${i + 1}`}
-                            className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
+                            className="text-[11px] px-2.5 py-1.5 min-h-[44px] lg:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
                             style={{
                               color: editingLotId === lot.id ? "white" : "var(--color-accent)",
                               backgroundColor: editingLotId === lot.id ? "var(--color-accent)" : "transparent",
-                              border: `1px solid ${editingLotId === lot.id ? "var(--color-accent)" : "rgba(16, 185, 129, 0.3)"}`,
+                              border: `1px solid ${editingLotId === lot.id ? "var(--color-accent)" : "var(--accent-15)"}`,
                             }}
                           >
                             {editingLotId === lot.id ? "Cancel" : "Edit"}
@@ -477,11 +481,11 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                               setDeletingLotId(null)
                             }}
                             aria-label={sellingLotId === lot.id ? `Cancel selling ${group.ticker}` : `Sell ${group.ticker} lot ${i + 1}`}
-                            className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
+                            className="text-[11px] px-2.5 py-1.5 min-h-[44px] lg:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
                             style={{
                               color: sellingLotId === lot.id ? "white" : "var(--color-loss)",
                               backgroundColor: sellingLotId === lot.id ? "var(--color-loss)" : "transparent",
-                              border: `1px solid ${sellingLotId === lot.id ? "var(--color-loss)" : "rgba(244, 63, 94, 0.3)"}`,
+                              border: `1px solid ${sellingLotId === lot.id ? "var(--color-loss)" : "var(--loss-30)"}`,
                             }}
                           >
                             {sellingLotId === lot.id ? "Cancel" : "Sell"}
@@ -493,7 +497,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                               setSellingLotId(null)
                             }}
                             aria-label={`Delete lot ${lot.lot_label}`}
-                            className="p-1.5 min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 flex items-center justify-center rounded-md cursor-pointer transition-all duration-200"
+                            className="p-1.5 min-h-[44px] lg:min-h-0 min-w-[44px] sm:min-w-0 flex items-center justify-center rounded-md cursor-pointer transition-all duration-200"
                             style={{
                               color: deletingLotId === lot.id ? "white" : "var(--text-muted)",
                               backgroundColor: deletingLotId === lot.id ? "var(--color-loss)" : "transparent",
