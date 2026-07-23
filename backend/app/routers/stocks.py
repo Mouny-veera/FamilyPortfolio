@@ -1,3 +1,5 @@
+import asyncio
+import traceback
 from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
@@ -20,7 +22,7 @@ RESOLUTION_MAP = {
 @router.get("/{ticker}/chart")
 async def get_stock_chart(
     ticker: str,
-    range: str = Query("6M", regex="^(1D|1W|1M|3M|6M|1Y|5Y)$"),
+    range: str = Query("6M", pattern="^(1D|1W|1M|3M|6M|1Y|5Y)$"),
 ):
     resolution, days = RESOLUTION_MAP[range]
     provider = get_active_provider()
@@ -29,8 +31,7 @@ async def get_stock_chart(
     start = end - timedelta(days=days)
 
     from ..services.market_data import FyersProvider
-    if isinstance(provider, FyersProvider) and resolution != "D" and resolution != "W":
-        import asyncio
+    if isinstance(provider, FyersProvider) and resolution not in ("D", "W"):
         from ..services.nse_master import get_fyers_symbol
         symbol = get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
         data = {
@@ -62,25 +63,61 @@ async def get_stock_chart(
         except Exception as e:
             print(f"Fyers intraday error for {ticker}: {e}")
 
-    ohlc = await provider.get_historical_ohlc(ticker, start, end)
+    try:
+        ohlc = await provider.get_historical_ohlc(ticker, start, end)
+    except Exception as e:
+        print(f"Chart historical OHLC error for {ticker}: {e}")
+        traceback.print_exc()
+        ohlc = None
+
     if ohlc is None or ohlc.empty:
-        raise HTTPException(status_code=404, detail=f"No data for {ticker}")
+        # Direct yfinance fallback for chart data
+        try:
+            import yfinance as yf
+            symbol = f"{ticker}.NS"
+            t = await asyncio.to_thread(lambda: yf.Ticker(symbol))
+            df = await asyncio.to_thread(
+                lambda: t.history(start=start.isoformat(), end=end.isoformat())
+            )
+            if df is not None and not df.empty:
+                ohlc = df.reset_index()
+                ohlc = ohlc.rename(columns={
+                    "Date": "date", "Datetime": "date",
+                    "Open": "open", "High": "high", "Low": "low",
+                    "Close": "close", "Volume": "volume",
+                })
+        except Exception as e:
+            print(f"yfinance chart fallback error for {ticker}: {e}")
+            traceback.print_exc()
+
+    if ohlc is None or ohlc.empty:
+        raise HTTPException(status_code=404, detail=f"No chart data for {ticker}")
 
     candles = []
-    for _, row in ohlc.iterrows():
-        ts = row["date"]
-        if hasattr(ts, "timestamp"):
-            t = int(ts.timestamp())
-        else:
-            t = int(ts)
-        candles.append({
-            "time": t,
-            "open": round(float(row["open"]), 2),
-            "high": round(float(row["high"]), 2),
-            "low": round(float(row["low"]), 2),
-            "close": round(float(row["close"]), 2),
-            "volume": int(row["volume"]),
-        })
+    try:
+        for _, row in ohlc.iterrows():
+            ts = row.get("date") if hasattr(row, "get") else row["date"]
+            if hasattr(ts, "timestamp"):
+                t = int(ts.timestamp())
+            elif hasattr(ts, "value"):
+                t = int(ts.value // 10**9)
+            else:
+                t = int(ts)
+            candles.append({
+                "time": t,
+                "open": round(float(row["open"]), 2),
+                "high": round(float(row["high"]), 2),
+                "low": round(float(row["low"]), 2),
+                "close": round(float(row["close"]), 2),
+                "volume": int(row["volume"]),
+            })
+    except Exception as e:
+        print(f"Chart data processing error for {ticker}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to process chart data for {ticker}")
+
+    if not candles:
+        raise HTTPException(status_code=404, detail=f"No chart data for {ticker}")
 
     return {"candles": candles, "resolution": resolution}
 
@@ -91,7 +128,6 @@ async def get_stock_quote(ticker: str):
 
     from ..services.market_data import FyersProvider
     if isinstance(provider, FyersProvider):
-        import asyncio
         from ..services.nse_master import get_fyers_symbol
         symbol = get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
         try:
@@ -116,8 +152,7 @@ async def get_stock_quote(ticker: str):
         except Exception as e:
             print(f"Fyers quote error for {ticker}: {e}")
 
-    # yfinance fallback: fetch full quote data via Ticker.fast_info
-    import asyncio
+    # yfinance fallback
     import yfinance as yf
 
     symbol = f"{ticker}.NS"
@@ -158,7 +193,6 @@ async def get_market_depth(ticker: str):
     if not isinstance(provider, FyersProvider):
         raise HTTPException(status_code=501, detail="Market depth requires Fyers")
 
-    import asyncio
     from ..services.nse_master import get_fyers_symbol
     symbol = get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
     try:
