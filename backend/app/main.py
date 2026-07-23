@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from .auth import require_auth
 from .database import init_db, async_session
 from .models import Member
-from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth
+from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth, stocks
 from .services.price_service import start_polling, stop_polling
 from .services.nse_master import refresh_nse_master_list
 from .services.fyers_auth import ensure_valid_token
@@ -65,6 +65,7 @@ app.include_router(settings.router)
 app.include_router(nse.router)
 app.include_router(alerts.router)
 app.include_router(google_auth.router)
+app.include_router(stocks.router)
 
 
 @app.get("/api/health")

@@ -19,6 +19,7 @@ const HoldingsPage = lazy(() => import("@/components/holdings/HoldingsPage").the
 const ScannerPage = lazy(() => import("@/components/scanner/ScannerPage").then(m => ({ default: m.ScannerPage })))
 const AlertsPage = lazy(() => import("@/components/alerts/AlertsPage").then(m => ({ default: m.AlertsPage })))
 const SettingsPage = lazy(() => import("@/components/settings/SettingsPage").then(m => ({ default: m.SettingsPage })))
+const StockDetailPage = lazy(() => import("@/components/stock/StockDetailPage").then(m => ({ default: m.StockDetailPage })))
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ""
 
@@ -102,6 +103,7 @@ function AuthenticatedApp() {
               <Route path="/holdings/:memberId" element={<HoldingsPage />} />
               <Route path="/scanner" element={<ScannerPage />} />
               <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/stock/:ticker" element={<StockDetailPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

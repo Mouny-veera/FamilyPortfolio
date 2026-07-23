@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { Bell, Send, TrendingUp, ChevronRight, User } from "lucide-react"
 import { api, type Alert } from "@/lib/api"
 import { formatCurrency, formatPct, formatNumber } from "@/lib/utils"
@@ -17,6 +18,7 @@ interface MemberGroup {
 }
 
 function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSellSuccess: () => void }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(true)
   const [sellingTicker, setSellingTicker] = useState<string | null>(null)
 
@@ -100,7 +102,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-[13px] truncate" style={{ color: "var(--text-primary)" }}>{alert.ticker}</p>
+                    <p className="font-semibold text-[13px] truncate cursor-pointer" style={{ color: "var(--color-accent)" }} onClick={() => navigate(`/stock/${alert.ticker}`)}>{alert.ticker}</p>
                     <p className="text-[11px] font-mono tabular-nums mt-0.5" style={{ color: "var(--text-muted)" }}>
                       {formatNumber(alert.total_qty)} qty · {formatCurrency(alert.total_buy_value)}
                     </p>
@@ -160,7 +162,7 @@ function MemberAlertGroup({ group, onSellSuccess }: { group: MemberGroup; onSell
                       borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined,
                     }}
                   >
-                    <td className="px-4 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{alert.ticker}</td>
+                    <td className="px-4 py-2.5 font-semibold whitespace-nowrap cursor-pointer" style={{ color: "var(--color-accent)" }} onClick={() => navigate(`/stock/${alert.ticker}`)}>{alert.ticker}</td>
                     <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatNumber(alert.total_qty)}</td>
                     <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(alert.total_buy_value)}</td>
                     <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>₹{formatNumber(alert.current_price)}</td>

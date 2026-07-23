@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react"
-import { ChevronRight, TrendingUp, CheckCircle2, AlertTriangle, Search, Trash2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { ChevronRight, TrendingUp, CheckCircle2, AlertTriangle, Search, Trash2, BarChart3 } from "lucide-react"
 import type { LotGroup as LotGroupType, NseSearchResult } from "@/lib/api"
 import { api } from "@/lib/api"
 import { cn, formatCurrency, formatNumber, formatDate, formatPct } from "@/lib/utils"
@@ -139,6 +140,7 @@ interface LotGroupProps {
 }
 
 export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(true)
   const [sellingLotId, setSellingLotId] = useState<number | null>(null)
   const [editingLotId, setEditingLotId] = useState<number | null>(null)
@@ -192,6 +194,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           <span className="font-semibold text-[13px] tracking-tight" style={{ color: "var(--text-primary)" }}>
             {group.ticker}
           </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
+            className="p-1 rounded-md transition-colors cursor-pointer shrink-0"
+            style={{ color: "var(--color-accent)" }}
+            aria-label={`View ${group.ticker} chart`}
+          >
+            <BarChart3 size={13} strokeWidth={2} />
+          </button>
           {group.mapping_status === "verified" && (
             <CheckCircle2 size={12} strokeWidth={2.5} style={{ color: "var(--color-profit)" }} className="shrink-0" />
           )}
@@ -324,6 +334,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
             <span className="font-semibold text-sm tracking-tight truncate" style={{ color: "var(--text-primary)" }}>
               {group.ticker}
             </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
+              className="p-1 rounded-md transition-colors cursor-pointer shrink-0"
+              style={{ color: "var(--color-accent)" }}
+              aria-label={`View ${group.ticker} chart`}
+            >
+              <BarChart3 size={13} strokeWidth={2} />
+            </button>
             {group.mapping_status === "verified" && (
               <CheckCircle2 size={12} strokeWidth={2.5} style={{ color: "var(--color-profit)" }} className="shrink-0" />
             )}

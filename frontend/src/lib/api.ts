@@ -145,6 +145,36 @@ export interface ScanResult {
   scanned_at: string
 }
 
+export interface StockCandle {
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface StockChart {
+  candles: StockCandle[]
+  resolution: string
+}
+
+export interface StockQuote {
+  ticker: string
+  last_price: number | null
+  change: number | null
+  change_pct: number | null
+  open: number | null
+  high: number | null
+  low: number | null
+  prev_close: number | null
+  volume: number | null
+  high_52w: number | null
+  low_52w: number | null
+}
+
+export type ChartRange = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y"
+
 export const api = {
   getMembers: () => request<Member[]>("/members"),
   getMember: (id: number) => request<Member>(`/members/${id}`),
@@ -199,6 +229,10 @@ export const api = {
   getFyersStatus: () => request<{ connected: boolean; token_valid: boolean; fy_id?: string; message: string }>("/settings/fyers/status"),
   exchangeFyersAuthCode: (auth_code: string) => request<{ status: string; message: string }>("/settings/fyers/manual-token", { method: "POST", body: JSON.stringify({ auth_code }) }),
   removeFyers: () => request<{ status: string; message: string }>("/settings/fyers", { method: "DELETE" }),
+  getStockChart: (ticker: string, range: ChartRange = "6M") =>
+    request<StockChart>(`/stocks/${encodeURIComponent(ticker)}/chart?range=${range}`),
+  getStockQuote: (ticker: string) =>
+    request<StockQuote>(`/stocks/${encodeURIComponent(ticker)}/quote`),
   googleLogin: (credential: string) =>
     request<{ token: string; email: string; name: string; picture: string | null }>("/auth/google", {
       method: "POST",

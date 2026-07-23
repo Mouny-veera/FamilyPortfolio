@@ -18,8 +18,9 @@ class RSIStrategy(BaseStrategy):
         gain = delta.where(delta > 0, 0.0)
         loss = (-delta).where(delta < 0, 0.0)
 
-        avg_gain = gain.ewm(span=14, adjust=False).mean()
-        avg_loss = loss.ewm(span=14, adjust=False).mean()
+        # Wilder's smoothing (RMA): alpha=1/14, matches TradingView and frontend
+        avg_gain = gain.ewm(alpha=1/14, adjust=False).mean()
+        avg_loss = loss.ewm(alpha=1/14, adjust=False).mean()
 
         rs = avg_gain / avg_loss.replace(0, float("inf"))
         rsi = 100 - (100 / (1 + rs))

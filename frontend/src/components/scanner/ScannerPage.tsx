@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
+import { useNavigate } from "react-router-dom"
 import { Play, Loader2, Search } from "lucide-react"
 import { api, type ScanResult } from "@/lib/api"
 import { formatNumber } from "@/lib/utils"
@@ -221,6 +222,19 @@ function TD({ children, mono, align = "left", color }: { children: React.ReactNo
   )
 }
 
+function TickerCell({ ticker }: { ticker: string }) {
+  const navigate = useNavigate()
+  return (
+    <td
+      className="px-5 py-2.5 font-semibold whitespace-nowrap cursor-pointer transition-colors"
+      style={{ color: "var(--color-accent)" }}
+      onClick={() => navigate(`/stock/${ticker}`)}
+    >
+      {ticker}
+    </td>
+  )
+}
+
 function SignalBadge({ signal, variant }: { signal: string; variant: "bullish" | "bearish" | "neutral" | "warning" }) {
   const colors = {
     bullish: { bg: "var(--accent-10)", color: "var(--color-profit)" },
@@ -264,7 +278,7 @@ function FibTable({ results }: { results: ScanResult[] }) {
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TickerCell ticker={r.ticker} />
               <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
               <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
               <TD mono align="right">₹{formatNumber(m.high_6m as number)}</TD>
@@ -327,7 +341,7 @@ function PivotTable({ results }: { results: ScanResult[] }) {
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TickerCell ticker={r.ticker} />
               <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
               <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
               <TD mono align="right">₹{formatNumber(m.pivot as number)}</TD>
@@ -390,7 +404,7 @@ function MACDTable({ results }: { results: ScanResult[] }) {
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TickerCell ticker={r.ticker} />
               <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
               <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
               <TD mono align="right">{(m.macd as number).toFixed(2)}</TD>
@@ -451,7 +465,7 @@ function RSITable({ results }: { results: ScanResult[] }) {
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <td className="px-5 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{r.ticker}</td>
+              <TickerCell ticker={r.ticker} />
               <TD mono align="right" color="var(--color-profit)">{r.score.toFixed(1)}</TD>
               <TD mono align="right">₹{formatNumber(m.current as number)}</TD>
               <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: rsiColor }}>
