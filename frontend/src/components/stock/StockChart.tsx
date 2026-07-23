@@ -5,7 +5,6 @@ import {
   HistogramSeries,
   LineSeries,
   type IChartApi,
-  type ISeriesApi,
   ColorType,
   CrosshairMode,
   type CandlestickData,
@@ -54,9 +53,6 @@ function getChartColors(dark: boolean) {
         downWick: "#F43F5E",
         volUp: "rgba(16, 185, 129, 0.2)",
         volDown: "rgba(244, 63, 94, 0.2)",
-        bbFill: "rgba(99, 102, 241, 0.06)",
-        rsiOverbought: "rgba(244, 63, 94, 0.15)",
-        rsiOversold: "rgba(16, 185, 129, 0.15)",
       }
     : {
         bg: "transparent",
@@ -71,9 +67,6 @@ function getChartColors(dark: boolean) {
         downWick: "#E11D48",
         volUp: "rgba(5, 150, 105, 0.15)",
         volDown: "rgba(225, 29, 72, 0.15)",
-        bbFill: "rgba(99, 102, 241, 0.04)",
-        rsiOverbought: "rgba(225, 29, 72, 0.08)",
-        rsiOversold: "rgba(5, 150, 105, 0.08)",
       }
 }
 
@@ -88,7 +81,6 @@ function getIndicatorColor(id: IndicatorId): string {
 export function StockChart({ candles, resolution, activeIndicators }: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
-  const seriesRefs = useRef<ISeriesApi<string>[]>([])
 
   const isIntraday = ["1", "5", "15", "60"].includes(resolution)
 
@@ -98,7 +90,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
     if (chartRef.current) {
       chartRef.current.remove()
       chartRef.current = null
-      seriesRefs.current = []
     }
 
     const dark = isDark()
@@ -159,7 +150,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
         close: c.close,
       } as CandlestickData<Time>))
     )
-    seriesRefs.current.push(candleSeries as ISeriesApi<string>)
 
     // --- Volume on main pane ---
     if (hasVolume) {
@@ -177,39 +167,32 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
           color: c.close >= c.open ? colors.volUp : colors.volDown,
         } as HistogramData<Time>))
       )
-      seriesRefs.current.push(volSeries as ISeriesApi<string>)
     }
 
     // --- Overlay indicators on main pane ---
     if (activeIndicators.has("sma20") && candles.length >= 20) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("sma20"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeSMA(candles, 20)))
-      seriesRefs.current.push(s as ISeriesApi<string>)
     }
     if (activeIndicators.has("sma50") && candles.length >= 50) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("sma50"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeSMA(candles, 50)))
-      seriesRefs.current.push(s as ISeriesApi<string>)
     }
     if (activeIndicators.has("sma200") && candles.length >= 200) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("sma200"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeSMA(candles, 200)))
-      seriesRefs.current.push(s as ISeriesApi<string>)
     }
     if (activeIndicators.has("ema20") && candles.length >= 20) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("ema20"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeEMA(candles, 20)))
-      seriesRefs.current.push(s as ISeriesApi<string>)
     }
     if (activeIndicators.has("ema50") && candles.length >= 50) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("ema50"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeEMA(candles, 50)))
-      seriesRefs.current.push(s as ISeriesApi<string>)
     }
     if (activeIndicators.has("vwap") && candles.length > 0) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("vwap"), lineWidth: 1, lineStyle: 2, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeVWAP(candles)))
-      seriesRefs.current.push(s as ISeriesApi<string>)
     }
 
     // --- Bollinger Bands ---
@@ -218,15 +201,12 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       const bbColor = getIndicatorColor("bollinger")
       const mid = chart.addSeries(LineSeries, { color: bbColor, lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       mid.setData(toLineData(bb.middle))
-      seriesRefs.current.push(mid as ISeriesApi<string>)
 
       const upper = chart.addSeries(LineSeries, { color: bbColor, lineWidth: 1, lineStyle: 2, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       upper.setData(toLineData(bb.upper))
-      seriesRefs.current.push(upper as ISeriesApi<string>)
 
       const lower = chart.addSeries(LineSeries, { color: bbColor, lineWidth: 1, lineStyle: 2, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       lower.setData(toLineData(bb.lower))
-      seriesRefs.current.push(lower as ISeriesApi<string>)
     }
 
     // --- RSI in separate pane ---
@@ -241,17 +221,14 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
         priceFormat: { type: "custom", formatter: (v: number) => v.toFixed(1) },
       })
       rsiSeries.setData(toLineData(rsiData))
-      seriesRefs.current.push(rsiSeries as ISeriesApi<string>)
 
       // 70/30 reference lines
       const overbought = rsiData.map(p => ({ time: p.time as Time, value: 70 }))
       const oversold = rsiData.map(p => ({ time: p.time as Time, value: 30 }))
       const ob = rsiPane.addSeries(LineSeries, { color: colors.downColor, lineWidth: 1, lineStyle: 2, lastValueVisible: false, priceLineVisible: false })
       ob.setData(overbought)
-      seriesRefs.current.push(ob as ISeriesApi<string>)
       const os = rsiPane.addSeries(LineSeries, { color: colors.upColor, lineWidth: 1, lineStyle: 2, lastValueVisible: false, priceLineVisible: false })
       os.setData(oversold)
-      seriesRefs.current.push(os as ISeriesApi<string>)
     }
 
     // --- MACD in separate pane ---
@@ -265,7 +242,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
         priceFormat: { type: "custom", formatter: (v: number) => v.toFixed(2) },
       })
       macdHist.setData(macdData.histogram.map(h => ({ time: h.time as Time, value: h.value, color: h.color })))
-      seriesRefs.current.push(macdHist as ISeriesApi<string>)
 
       const macdLine = macdPane.addSeries(LineSeries, {
         color: "#3B82F6",
@@ -275,7 +251,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
         priceFormat: { type: "custom", formatter: (v: number) => v.toFixed(2) },
       })
       macdLine.setData(toLineData(macdData.macd))
-      seriesRefs.current.push(macdLine as ISeriesApi<string>)
 
       const signalLine = macdPane.addSeries(LineSeries, {
         color: "#F59E0B",
@@ -284,7 +259,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
         priceLineVisible: false,
       })
       signalLine.setData(toLineData(macdData.signal))
-      seriesRefs.current.push(signalLine as ISeriesApi<string>)
     }
 
     chart.timeScale().fitContent()
@@ -318,7 +292,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       if (chartRef.current) {
         chartRef.current.remove()
         chartRef.current = null
-        seriesRefs.current = []
       }
     }
   }, [buildChart])
