@@ -93,6 +93,10 @@ async def get_stock_chart(
     if ohlc is None or ohlc.empty:
         raise HTTPException(status_code=404, detail=f"No chart data for {ticker}")
 
+    ohlc = ohlc.dropna(subset=["open", "high", "low", "close"])
+    if ohlc.empty:
+        raise HTTPException(status_code=404, detail=f"No valid chart data for {ticker}")
+
     candles = []
     try:
         for _, row in ohlc.iterrows():
@@ -103,13 +107,14 @@ async def get_stock_chart(
                 t = int(ts.value // 10**9)
             else:
                 t = int(ts)
+            vol = row["volume"]
             candles.append({
                 "time": t,
                 "open": round(float(row["open"]), 2),
                 "high": round(float(row["high"]), 2),
                 "low": round(float(row["low"]), 2),
                 "close": round(float(row["close"]), 2),
-                "volume": int(row["volume"]),
+                "volume": int(vol) if vol == vol else 0,
             })
     except Exception as e:
         print(f"Chart data processing error for {ticker}: {e}")
