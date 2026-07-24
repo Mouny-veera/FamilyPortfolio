@@ -1,6 +1,6 @@
 import { useState, useEffect, useId } from "react"
 import { api } from "@/lib/api"
-import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2, Clock, Calendar } from "lucide-react"
+import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2, Clock, Calendar, Globe } from "lucide-react"
 import { MembersSection } from "./MembersSection"
 
 interface ProviderInfo {
@@ -32,6 +32,9 @@ export function SettingsPage() {
   const [autoScan, setAutoScan] = useState<{ enabled: boolean; scan_time: string; last_auto_scan: string | null; next_scan: string | null } | null>(null)
   const [autoScanLoading, setAutoScanLoading] = useState(false)
 
+  const [niftyStatus, setNiftyStatus] = useState<{ count: number; updated_at: string | null; source: string } | null>(null)
+  const [niftyRefreshing, setNiftyRefreshing] = useState(false)
+
   const checkTokenStatus = async () => {
     setTokenStatusLoading(true)
     try {
@@ -57,6 +60,7 @@ export function SettingsPage() {
       }
     }).catch(console.error)
     api.getAutoScan().then(setAutoScan).catch(console.error)
+    api.getNifty200Status().then(setNiftyStatus).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -485,7 +489,7 @@ export function SettingsPage() {
               <Database size={14} strokeWidth={1.5} style={{ color: "var(--color-info)" }} />
             </div>
             <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
-              Data sources
+              Data Sources
             </h2>
           </div>
           <div className="space-y-2">
@@ -493,13 +497,62 @@ export function SettingsPage() {
               { label: "Live prices", value: providerInfo?.active === "fyers" ? "Fyers API (real-time)" : "yfinance (15-20 min delay)" },
               { label: "Historical OHLC", value: providerInfo?.active === "fyers" ? "Fyers API" : "yfinance (.NS suffix)" },
               { label: "Ticker search", value: "Fyers Symbols Master (public.fyers.in)" },
-              { label: "Scanner universe", value: "Nifty 200 via Fyers API" },
             ].map((item) => (
               <div key={item.label} className="flex items-baseline gap-2 text-[12px]">
                 <span className="font-medium" style={{ color: "var(--text-secondary)" }}>{item.label}:</span>
                 <span className="font-mono text-[11px]" style={{ color: "var(--text-muted)" }}>{item.value}</span>
               </div>
             ))}
+          </div>
+
+          {/* Scanner Universe — Nifty 200 */}
+          <div
+            className="mt-3 rounded-lg p-3"
+            style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Globe size={13} style={{ color: "var(--color-info)" }} />
+                <span className="text-[12px] font-medium" style={{ color: "var(--text-secondary)" }}>Scanner Universe</span>
+              </div>
+              <button
+                onClick={async () => {
+                  setNiftyRefreshing(true)
+                  try {
+                    await api.refreshNifty200()
+                    const status = await api.getNifty200Status()
+                    setNiftyStatus(status)
+                  } catch { /* ignore */ } finally {
+                    setNiftyRefreshing(false)
+                  }
+                }}
+                disabled={niftyRefreshing}
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ color: "var(--color-info-light)", border: "1px solid rgba(99, 102, 241, 0.2)" }}
+              >
+                <RefreshCw size={11} className={niftyRefreshing ? "animate-spin" : ""} />
+                Refresh
+              </button>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>
+                Nifty 200 — <span className="font-semibold">{niftyStatus?.count ?? "..."}</span> stocks
+              </span>
+              <span
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                style={{
+                  backgroundColor: niftyStatus?.source === "niftyindices.com" ? "rgba(16, 185, 129, 0.08)" : "rgba(245, 158, 11, 0.08)",
+                  color: niftyStatus?.source === "niftyindices.com" ? "var(--color-profit)" : "var(--color-amber)",
+                }}
+              >
+                {niftyStatus?.source === "niftyindices.com" ? "Live from NSE" : niftyStatus?.source ?? "—"}
+              </span>
+            </div>
+            {niftyStatus?.updated_at && (
+              <div className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
+                Last updated: {new Date(niftyStatus.updated_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+              </div>
+            )}
           </div>
         </div>
 

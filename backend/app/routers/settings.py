@@ -5,6 +5,7 @@ from ..services.price_service import refresh_prices
 from ..services.market_data import load_config, save_config, get_active_provider, FyersProvider
 from ..services.fyers_auth import generate_fyers_token, exchange_auth_code
 from ..services.scan_scheduler import get_auto_scan_status, set_auto_scan_enabled
+from ..services.nifty_index import refresh_nifty200, load_nifty200
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -40,7 +41,8 @@ async def get_data_provider():
         "fyers_fy_id": fyers_cfg.get("fy_id", ""),
         "auto_login": auto_login,
         "ticker_search_source": "Fyers Symbols Master",
-        "scanner_universe": "Nifty 200 via Fyers API",
+        "scanner_universe": "Nifty 200 (auto-refreshed from NSE)",
+        "scanner_universe_count": len(load_nifty200()),
         "auth_url": auth_url,
         "needs_browser_login": needs_browser_login,
     }
@@ -151,6 +153,27 @@ async def remove_fyers():
     config.pop("fyers", None)
     save_config(config)
     return {"status": "ok", "message": "Switched back to yfinance"}
+
+
+@router.post("/refresh-nifty200")
+async def manual_refresh_nifty200():
+    result = await refresh_nifty200()
+    return result
+
+
+@router.get("/nifty200-status")
+async def nifty200_status():
+    import json
+    from pathlib import Path
+    nifty_file = Path(__file__).resolve().parent.parent.parent.parent / "data" / "nifty200.json"
+    if nifty_file.exists():
+        data = json.loads(nifty_file.read_text())
+        return {
+            "count": data.get("count", len(data.get("constituents", []))),
+            "updated_at": data.get("updated_at"),
+            "source": data.get("source", "static file"),
+        }
+    return {"count": 0, "updated_at": None, "source": "none"}
 
 
 @router.get("/auto-scan")

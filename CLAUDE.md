@@ -20,7 +20,7 @@ Frontend proxies `/api/*` to `http://localhost:8000` via Vite config.
 - **Market Data**: Fyers API (primary, real-time) with yfinance per-ticker fallback for symbols Fyers can't resolve. Provider pattern in `services/market_data.py`.
 - **Fyers Auth**: Headless login via TOTP + PIN in `services/fyers_auth.py`. Uses base64-encoded credentials, `validate-authcode` endpoint with appIdHash. Env vars: `FYERS_APP_ID`, `FYERS_SECRET`, `FYERS_REDIRECT_URI` in `.env`. Credentials in `data/config.json`.
 - **Ticker Search**: Fyers public symbols master (`NSE_CM.csv`), parsed on startup into in-memory cache. Includes all tradeable series (EQ, BE, ST, etc.), not just EQ.
-- **Scanner Universe**: Nifty 200 from `data/nifty200.json` (editable JSON file).
+- **Scanner Universe**: Nifty 200 auto-fetched from NSE (`niftyindices.com` CSV endpoint) on startup and before each scan. Cached in `data/nifty200.json` as fallback. Service: `services/nifty_index.py`.
 - **Database**: `data/portfolio.db` (SQLite). Config in `data/config.json`.
 
 ## Architecture Principles

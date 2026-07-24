@@ -229,6 +229,8 @@ export const api = {
   getFyersStatus: () => request<{ connected: boolean; token_valid: boolean; fy_id?: string; message: string }>("/settings/fyers/status"),
   exchangeFyersAuthCode: (auth_code: string) => request<{ status: string; message: string }>("/settings/fyers/manual-token", { method: "POST", body: JSON.stringify({ auth_code }) }),
   removeFyers: () => request<{ status: string; message: string }>("/settings/fyers", { method: "DELETE" }),
+  getNifty200Status: () => request<{ count: number; updated_at: string | null; source: string }>("/settings/nifty200-status"),
+  refreshNifty200: () => request<{ status: string; count: number }>("/settings/refresh-nifty200", { method: "POST" }),
   getAutoScan: () => request<{ enabled: boolean; scan_time: string; last_auto_scan: string | null; next_scan: string | null }>("/settings/auto-scan"),
   setAutoScan: (enabled: boolean) => request<{ enabled: boolean; scan_time: string; last_auto_scan: string | null; next_scan: string | null }>("/settings/auto-scan", { method: "POST", body: JSON.stringify({ enabled }) }),
   getStockChart: (ticker: string, range: ChartRange = "6M") =>
