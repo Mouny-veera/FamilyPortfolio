@@ -83,7 +83,9 @@ class YFinanceProvider(MarketDataProvider):
                 return None
             df = df.reset_index()
             df = df.rename(columns={"Date": "date", "Open": "open", "High": "high", "Low": "low", "Close": "close", "Volume": "volume"})
-            return df[["date", "open", "high", "low", "close", "volume"]]
+            df = df[["date", "open", "high", "low", "close", "volume"]]
+            df = df.dropna(subset=["open", "high", "low", "close"])
+            return df if not df.empty else None
         except Exception as e:
             print(f"Historical OHLC error for {ticker}: {e}")
             return None
@@ -185,6 +187,9 @@ class FyersProvider(MarketDataProvider):
                 return await _get_yf_fallback().get_historical_ohlc(ticker, start, end)
             df = pd.DataFrame(candles, columns=["date", "open", "high", "low", "close", "volume"])
             df["date"] = pd.to_datetime(df["date"], unit="s" if isinstance(candles[0][0], (int, float)) else None)
+            df = df.dropna(subset=["open", "high", "low", "close"])
+            if df.empty:
+                return await _get_yf_fallback().get_historical_ohlc(ticker, start, end)
             return df
         except Exception as e:
             print(f"Fyers historical OHLC error for {ticker}: {e}")

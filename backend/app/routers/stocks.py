@@ -46,20 +46,21 @@ async def get_stock_chart(
             resp = await asyncio.to_thread(provider._fyers.history, data=data)
             candles = resp.get("candles")
             if candles:
-                return {
-                    "candles": [
-                        {
-                            "time": int(c[0]) if isinstance(c[0], (int, float)) else c[0],
-                            "open": round(c[1], 2),
-                            "high": round(c[2], 2),
-                            "low": round(c[3], 2),
-                            "close": round(c[4], 2),
-                            "volume": int(c[5]),
-                        }
-                        for c in candles
-                    ],
-                    "resolution": resolution,
-                }
+                clean = []
+                for c in candles:
+                    if any(c[i] != c[i] for i in range(1, 5)):
+                        continue
+                    vol = c[5]
+                    clean.append({
+                        "time": int(c[0]) if isinstance(c[0], (int, float)) else c[0],
+                        "open": round(c[1], 2),
+                        "high": round(c[2], 2),
+                        "low": round(c[3], 2),
+                        "close": round(c[4], 2),
+                        "volume": int(vol) if vol == vol else 0,
+                    })
+                if clean:
+                    return {"candles": clean, "resolution": resolution}
         except Exception as e:
             print(f"Fyers intraday error for {ticker}: {e}")
 
