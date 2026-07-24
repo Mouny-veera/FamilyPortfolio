@@ -26,4 +26,8 @@ async def run_scanner(db: AsyncSession = Depends(get_db)):
         results = await run_scan()
     except RuntimeError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Scan failed: {str(e)}")
     return {"status": "completed", "results_count": len(results)}

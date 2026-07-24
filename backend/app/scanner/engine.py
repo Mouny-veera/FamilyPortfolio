@@ -41,7 +41,10 @@ async def run_scan() -> list[dict]:
         raise RuntimeError("A scan is already in progress")
 
     async with _scan_lock:
-        await refresh_nifty200()
+        try:
+            await refresh_nifty200()
+        except Exception as e:
+            print(f"[Scanner] Nifty 200 refresh failed, using cached: {e}")
         universe = load_nifty200()
         if not universe:
             raise RuntimeError("Scanner universe is empty — check data/nifty200.json")
