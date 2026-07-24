@@ -194,14 +194,6 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           <span className="font-semibold text-[13px] tracking-tight" style={{ color: "var(--text-primary)" }}>
             {group.ticker}
           </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
-            className="p-1 rounded-md transition-colors cursor-pointer shrink-0"
-            style={{ color: "var(--color-accent)" }}
-            aria-label={`View ${group.ticker} chart`}
-          >
-            <BarChart3 size={13} strokeWidth={2} />
-          </button>
           {group.mapping_status === "verified" && (
             <CheckCircle2 size={12} strokeWidth={2.5} style={{ color: "var(--color-profit)" }} className="shrink-0" />
           )}
@@ -237,6 +229,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
               ≥10% Profit
             </span>
           )}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
+          className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md transition-colors cursor-pointer shrink-0"
+          style={{ color: "var(--color-accent)" }}
+          aria-label={`View ${group.ticker} chart`}
+        >
+          <BarChart3 size={13} strokeWidth={2} />
         </button>
 
         <div className="flex items-center gap-6 text-right shrink-0">
@@ -334,14 +334,6 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
             <span className="font-semibold text-sm tracking-tight truncate" style={{ color: "var(--text-primary)" }}>
               {group.ticker}
             </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
-              className="p-1 rounded-md transition-colors cursor-pointer shrink-0"
-              style={{ color: "var(--color-accent)" }}
-              aria-label={`View ${group.ticker} chart`}
-            >
-              <BarChart3 size={13} strokeWidth={2} />
-            </button>
             {group.mapping_status === "verified" && (
               <CheckCircle2 size={12} strokeWidth={2.5} style={{ color: "var(--color-profit)" }} className="shrink-0" />
             )}
@@ -354,6 +346,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                 Unmatched
               </span>
             )}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md transition-colors cursor-pointer shrink-0"
+            style={{ color: "var(--color-accent)" }}
+            aria-label={`View ${group.ticker} chart`}
+          >
+            <BarChart3 size={13} strokeWidth={2} />
           </button>
 
           <button

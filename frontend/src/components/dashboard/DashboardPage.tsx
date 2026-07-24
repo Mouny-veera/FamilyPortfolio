@@ -239,9 +239,12 @@ export function DashboardPage() {
               {data.members.map((m, i) => (
                 <tr
                   key={m.member.id}
+                  role="link"
+                  tabIndex={0}
                   className="group cursor-pointer transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
                   style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
                   onClick={() => navigate(`/holdings/${m.member.id}`)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/holdings/${m.member.id}`) } }}
                 >
                   <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
                     <a

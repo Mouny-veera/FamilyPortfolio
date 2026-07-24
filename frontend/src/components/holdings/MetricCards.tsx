@@ -7,15 +7,15 @@ export function MetricCards({ summary }: { summary: HoldingsSummary }) {
       label: "Invested",
       value: formatCurrency(summary.invested),
       sub: null,
-      gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 60%)",
-      borderAccent: "rgba(16, 185, 129, 0.15)",
+      gradient: "var(--accent-gradient-08)",
+      borderAccent: "var(--accent-15)",
     },
     {
       label: "Current Value",
       value: formatCurrency(summary.current_value),
       sub: null,
-      gradient: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 60%)",
-      borderAccent: "rgba(99, 102, 241, 0.15)",
+      gradient: "var(--info-gradient-08)",
+      borderAccent: "var(--info-15)",
     },
     {
       label: "Unrealized P/L",
@@ -30,14 +30,14 @@ export function MetricCards({ summary }: { summary: HoldingsSummary }) {
       gradient:
         summary.unrealized_pnl != null
           ? summary.unrealized_pnl >= 0
-            ? "linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 60%)"
-            : "linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0) 60%)"
-          : "linear-gradient(135deg, rgba(148, 163, 184, 0.05) 0%, transparent 60%)",
+            ? "var(--accent-gradient-08)"
+            : "var(--loss-gradient-08)"
+          : "var(--muted-gradient-05)",
       borderAccent:
         summary.unrealized_pnl != null
           ? summary.unrealized_pnl >= 0
-            ? "rgba(16, 185, 129, 0.15)"
-            : "rgba(244, 63, 94, 0.15)"
+            ? "var(--accent-15)"
+            : "var(--loss-15)"
           : "var(--border-color)",
     },
   ]

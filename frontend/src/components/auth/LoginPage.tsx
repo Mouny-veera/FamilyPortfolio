@@ -67,7 +67,7 @@ export function LoginPage() {
               <div
                 className="w-4 h-4 border-2 rounded-full animate-spin"
                 style={{
-                  borderColor: "rgba(16, 185, 129, 0.3)",
+                  borderColor: "var(--accent-30)",
                   borderTopColor: "var(--color-profit)",
                 }}
               />
@@ -97,7 +97,7 @@ export function LoginPage() {
             className="text-[12px] font-medium mt-4 px-3 py-2 rounded-lg text-center"
             style={{
               color: "var(--color-loss)",
-              backgroundColor: "rgba(244, 63, 94, 0.08)",
+              backgroundColor: "var(--loss-08)",
             }}
           >
             {error}

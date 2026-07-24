@@ -67,7 +67,7 @@ function RangeBar({ high, low, current, label }: { high: number; low: number; cu
             style={{
               left: `calc(${clamped}% - 5px)`,
               background: "var(--gradient-accent)",
-              boxShadow: "0 0 6px rgba(16, 185, 129, 0.4)",
+              boxShadow: "var(--shadow-accent)",
             }}
           />
         </div>
@@ -99,7 +99,7 @@ function IndicatorPanel({
           onClick={() => setExpanded(v => !v)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px]"
           style={{
-            color: expanded ? "#fff" : "var(--text-secondary)",
+            color: expanded ? "white" : "var(--text-secondary)",
             background: expanded ? "var(--gradient-accent)" : "var(--bg-elevated)",
             boxShadow: expanded ? "var(--shadow-accent)" : "none",
           }}
@@ -358,7 +358,7 @@ export function StockDetailPage() {
                   onClick={() => handleRangeChange(r.key)}
                   className="px-3 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0"
                   style={{
-                    color: range === r.key ? "#fff" : "var(--text-muted)",
+                    color: range === r.key ? "white" : "var(--text-muted)",
                     background: range === r.key ? "var(--gradient-accent)" : "transparent",
                     boxShadow: range === r.key ? "var(--shadow-accent)" : "none",
                   }}

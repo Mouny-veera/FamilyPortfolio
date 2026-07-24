@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from "react"
+import { useState, useEffect, useId, useCallback } from "react"
 import { api } from "@/lib/api"
 import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2, Clock, Calendar, Globe } from "lucide-react"
 import { MembersSection } from "./MembersSection"
@@ -35,7 +35,7 @@ export function SettingsPage() {
   const [niftyStatus, setNiftyStatus] = useState<{ count: number; updated_at: string | null; source: string } | null>(null)
   const [niftyRefreshing, setNiftyRefreshing] = useState(false)
 
-  const checkTokenStatus = async () => {
+  const checkTokenStatus = useCallback(async () => {
     setTokenStatusLoading(true)
     try {
       const status = await api.getFyersStatus()
@@ -45,7 +45,7 @@ export function SettingsPage() {
     } finally {
       setTokenStatusLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -168,7 +168,7 @@ export function SettingsPage() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 100%)", border: "1px solid rgba(16, 185, 129, 0.15)" }}
+              style={{ background: "var(--accent-gradient-08)", border: "1px solid var(--accent-15)" }}
             >
               <RefreshCw size={14} strokeWidth={1.5} style={{ color: "var(--color-profit)" }} />
             </div>
@@ -179,7 +179,7 @@ export function SettingsPage() {
               <span
                 className="text-[10px] font-semibold px-2 py-0.5 rounded-md ml-auto"
                 style={{
-                  backgroundColor: providerInfo.active === "fyers" ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)",
+                  backgroundColor: providerInfo.active === "fyers" ? "var(--accent-10)" : "var(--warning-10)",
                   color: providerInfo.active === "fyers" ? "var(--color-profit)" : "var(--color-amber)",
                 }}
               >
@@ -216,7 +216,7 @@ export function SettingsPage() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 100%)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
+              style={{ background: "var(--info-gradient-12)", border: "1px solid var(--info-15)" }}
             >
               <Zap size={14} strokeWidth={1.5} style={{ color: "var(--color-info)" }} />
             </div>
@@ -235,7 +235,7 @@ export function SettingsPage() {
               <div className="flex items-center gap-3 flex-wrap">
                 <div
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px]"
-                  style={{ backgroundColor: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.15)" }}
+                  style={{ backgroundColor: "var(--accent-06)", border: "1px solid var(--accent-15)" }}
                 >
                   <CheckCircle2 size={14} strokeWidth={2} style={{ color: "var(--color-profit)" }} />
                   <span style={{ color: "var(--text-primary)" }}>
@@ -245,7 +245,7 @@ export function SettingsPage() {
                 {providerInfo.auto_login && (
                   <div
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
-                    style={{ backgroundColor: "rgba(99, 102, 241, 0.08)", color: "var(--color-info-light)" }}
+                    style={{ backgroundColor: "var(--info-08)", color: "var(--color-info-light)" }}
                   >
                     <Shield size={11} />
                     Auto-refresh enabled
@@ -262,13 +262,13 @@ export function SettingsPage() {
                   </div>
                 ) : tokenStatus?.token_valid ? (
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
-                    style={{ backgroundColor: "rgba(16, 185, 129, 0.06)", color: "var(--color-profit)" }}>
+                    style={{ backgroundColor: "var(--accent-06)", color: "var(--color-profit)" }}>
                     <CheckCircle2 size={12} strokeWidth={2} />
                     Token valid
                   </div>
                 ) : tokenStatus && !tokenStatus.token_valid ? (
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium"
-                    style={{ backgroundColor: "rgba(244, 63, 94, 0.06)", color: "var(--color-loss)" }}>
+                    style={{ backgroundColor: "var(--loss-06)", color: "var(--color-loss)" }}>
                     <XCircle size={12} strokeWidth={2} />
                     Token expired — refresh needed
                   </div>
@@ -302,7 +302,7 @@ export function SettingsPage() {
                     className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
                     style={{
                       color: "var(--color-info-light)",
-                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      border: "1px solid var(--info-30)",
                     }}
                   >
                     <Shield size={12} />
@@ -314,7 +314,7 @@ export function SettingsPage() {
                   className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
                   style={{
                     color: "var(--color-loss)",
-                    border: "1px solid rgba(244, 63, 94, 0.3)",
+                    border: "1px solid var(--loss-30)",
                   }}
                 >
                   Disconnect
@@ -351,7 +351,7 @@ export function SettingsPage() {
                 <button
                   onClick={handleFyersRemove}
                   className="text-[11px] px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-200"
-                  style={{ color: "var(--color-loss)", border: "1px solid rgba(244, 63, 94, 0.3)" }}
+                  style={{ color: "var(--color-loss)", border: "1px solid var(--loss-30)" }}
                 >
                   Remove
                 </button>
@@ -443,7 +443,7 @@ export function SettingsPage() {
               </div>
               <div
                 className="flex items-start gap-2 px-3 py-2 rounded-lg text-[11px]"
-                style={{ backgroundColor: "rgba(99, 102, 241, 0.06)", border: "1px solid rgba(99, 102, 241, 0.12)" }}
+                style={{ backgroundColor: "var(--info-06)", border: "1px solid var(--info-12)" }}
               >
                 <Shield size={13} className="mt-0.5 shrink-0" style={{ color: "var(--color-info-light)" }} />
                 <span style={{ color: "var(--text-secondary)" }}>
@@ -469,7 +469,7 @@ export function SettingsPage() {
               role="alert"
               className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg text-[12px] font-medium"
               style={{
-                backgroundColor: fyersMsg.type === "ok" ? "rgba(16, 185, 129, 0.08)" : "rgba(244, 63, 94, 0.08)",
+                backgroundColor: fyersMsg.type === "ok" ? "var(--accent-08)" : "var(--loss-08)",
                 color: fyersMsg.type === "ok" ? "var(--color-profit)" : "var(--color-loss)",
               }}
             >
@@ -484,7 +484,7 @@ export function SettingsPage() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 100%)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
+              style={{ background: "var(--info-gradient-12)", border: "1px solid var(--info-15)" }}
             >
               <Database size={14} strokeWidth={1.5} style={{ color: "var(--color-info)" }} />
             </div>
@@ -528,7 +528,7 @@ export function SettingsPage() {
                 }}
                 disabled={niftyRefreshing}
                 className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ color: "var(--color-info-light)", border: "1px solid rgba(99, 102, 241, 0.2)" }}
+                style={{ color: "var(--color-info-light)", border: "1px solid var(--info-20)" }}
               >
                 <RefreshCw size={11} className={niftyRefreshing ? "animate-spin" : ""} />
                 Refresh
@@ -541,7 +541,7 @@ export function SettingsPage() {
               <span
                 className="text-[10px] font-medium px-1.5 py-0.5 rounded"
                 style={{
-                  backgroundColor: niftyStatus?.source === "niftyindices.com" ? "rgba(16, 185, 129, 0.08)" : "rgba(245, 158, 11, 0.08)",
+                  backgroundColor: niftyStatus?.source === "niftyindices.com" ? "var(--accent-08)" : "var(--warning-08)",
                   color: niftyStatus?.source === "niftyindices.com" ? "var(--color-profit)" : "var(--color-amber)",
                 }}
               >
@@ -561,7 +561,7 @@ export function SettingsPage() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 100%)", border: "1px solid rgba(245, 158, 11, 0.15)" }}
+              style={{ background: "var(--warning-gradient-12)", border: "1px solid var(--warning-15)" }}
             >
               <Clock size={14} strokeWidth={1.5} style={{ color: "var(--color-amber)" }} />
             </div>
@@ -572,7 +572,7 @@ export function SettingsPage() {
               <span
                 className="text-[10px] font-semibold px-2 py-0.5 rounded-md ml-auto"
                 style={{
-                  backgroundColor: autoScan.enabled ? "rgba(16, 185, 129, 0.1)" : "rgba(148, 163, 184, 0.1)",
+                  backgroundColor: autoScan.enabled ? "var(--accent-10)" : "var(--muted-10)",
                   color: autoScan.enabled ? "var(--color-profit)" : "var(--text-muted)",
                 }}
               >

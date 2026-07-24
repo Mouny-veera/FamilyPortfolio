@@ -38,33 +38,42 @@ function isDark() {
   return window.matchMedia("(prefers-color-scheme: dark)").matches
 }
 
+function cssVar(name: string) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 function getChartColors(dark: boolean) {
+  const profit = cssVar("--color-profit")
+  const loss = cssVar("--color-loss")
+  const muted = cssVar("--text-muted")
+  const border = cssVar("--border-color")
+  const elevated = cssVar("--bg-elevated")
   return dark
     ? {
         bg: "transparent",
-        text: "#94A3B8",
+        text: muted,
         grid: "rgba(148, 163, 184, 0.06)",
-        border: "rgba(148, 163, 184, 0.08)",
+        border,
         crosshair: "rgba(148, 163, 184, 0.3)",
-        labelBg: "#1E293B",
-        upColor: "#10B981",
-        downColor: "#F43F5E",
-        upWick: "#10B981",
-        downWick: "#F43F5E",
+        labelBg: elevated,
+        upColor: profit,
+        downColor: loss,
+        upWick: profit,
+        downWick: loss,
         volUp: "rgba(16, 185, 129, 0.2)",
         volDown: "rgba(244, 63, 94, 0.2)",
       }
     : {
         bg: "transparent",
-        text: "#78716C",
+        text: muted,
         grid: "rgba(0, 0, 0, 0.04)",
-        border: "rgba(0, 0, 0, 0.06)",
+        border,
         crosshair: "rgba(0, 0, 0, 0.2)",
         labelBg: "#57534E",
-        upColor: "#059669",
-        downColor: "#E11D48",
-        upWick: "#059669",
-        downWick: "#E11D48",
+        upColor: profit,
+        downColor: loss,
+        upWick: profit,
+        downWick: loss,
         volUp: "rgba(5, 150, 105, 0.15)",
         volDown: "rgba(225, 29, 72, 0.15)",
       }
@@ -244,7 +253,7 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       macdHist.setData(macdData.histogram.map(h => ({ time: h.time as Time, value: h.value, color: h.color })))
 
       const macdLine = macdPane.addSeries(LineSeries, {
-        color: "#3B82F6",
+        color: cssVar("--color-info") || "#3B82F6",
         lineWidth: 2,
         lastValueVisible: true,
         priceLineVisible: false,
@@ -253,7 +262,7 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       macdLine.setData(toLineData(macdData.macd))
 
       const signalLine = macdPane.addSeries(LineSeries, {
-        color: "#F59E0B",
+        color: cssVar("--color-warning") || "#F59E0B",
         lineWidth: 1,
         lastValueVisible: false,
         priceLineVisible: false,

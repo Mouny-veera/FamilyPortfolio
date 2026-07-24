@@ -104,7 +104,7 @@ export function MembersSection() {
       <div className="flex items-center gap-2 mb-4">
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 100%)", border: "1px solid rgba(16, 185, 129, 0.15)" }}
+          style={{ background: "var(--accent-gradient-08)", border: "1px solid var(--accent-15)" }}
         >
           <Users size={14} strokeWidth={1.5} style={{ color: "var(--color-profit)" }} />
         </div>
@@ -126,7 +126,7 @@ export function MembersSection() {
         <div
           role="alert"
           className="flex items-center gap-2 mb-3 px-3 py-2.5 rounded-lg text-[12px] font-medium"
-          style={{ backgroundColor: "rgba(244, 63, 94, 0.08)", border: "1px solid rgba(244, 63, 94, 0.15)", color: "var(--color-loss)" }}
+          style={{ backgroundColor: "var(--loss-08)", border: "1px solid var(--loss-15)", color: "var(--color-loss)" }}
         >
           <AlertTriangle size={14} className="shrink-0" />
           {error}
@@ -168,7 +168,7 @@ export function MembersSection() {
                     style={{
                       border: "1px solid var(--color-accent)",
                       color: "var(--text-primary)",
-                      boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.12)",
+                      boxShadow: "0 0 0 3px var(--accent-12)",
                     }}
                     aria-label="Edit member name"
                   />
@@ -201,7 +201,7 @@ export function MembersSection() {
                 <div className="px-3.5 py-3 space-y-2.5">
                   <div
                     className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-[12px]"
-                    style={{ backgroundColor: "rgba(244, 63, 94, 0.06)", border: "1px solid rgba(244, 63, 94, 0.12)" }}
+                    style={{ backgroundColor: "var(--loss-06)", border: "1px solid var(--loss-12)" }}
                   >
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--color-loss)" }} />
                     <span style={{ color: "var(--text-primary)" }}>
@@ -259,7 +259,7 @@ export function MembersSection() {
                     className="flex items-center gap-1.5 px-2.5 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-[11px] font-medium cursor-pointer transition-all duration-200"
                     style={{
                       color: "var(--color-loss)",
-                      border: "1px solid rgba(244, 63, 94, 0.3)",
+                      border: "1px solid var(--loss-30)",
                     }}
                     aria-label={`Delete ${member.name}`}
                   >
@@ -295,7 +295,7 @@ export function MembersSection() {
                 style={{
                   border: "1px solid var(--color-accent)",
                   color: "var(--text-primary)",
-                  boxShadow: "0 0 0 3px rgba(16, 185, 129, 0.12)",
+                  boxShadow: "0 0 0 3px var(--accent-12)",
                 }}
                 aria-label="New member name"
               />

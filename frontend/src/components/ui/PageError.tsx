@@ -15,9 +15,8 @@ export function PageError({ error, onRetry }: PageErrorProps) {
       <div
         className="w-12 h-12 rounded-xl flex items-center justify-center"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 100%)",
-          border: "1px solid rgba(244, 63, 94, 0.15)",
+          background: "var(--loss-gradient-12)",
+          border: "1px solid var(--loss-15)",
         }}
       >
         <WifiOff

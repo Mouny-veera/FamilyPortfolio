@@ -207,6 +207,7 @@ export function ScannerPage() {
                         />
                       )}
                       <button
+                        id={`tab-${tab.key}`}
                         role="tab"
                         aria-selected={isActive}
                         aria-controls={`tabpanel-${tab.key}`}
@@ -268,7 +269,7 @@ export function ScannerPage() {
                 </p>
               </div>
             ) : (
-              <div className="w-full overflow-x-auto" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={activeTab}>
+              <div className="w-full overflow-x-auto" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
                 {activeTab === "composite" && <CompositeTable results={filtered} />}
                 {activeTab === "supertrend" && <SuperTrendTable results={filtered} />}
                 {activeTab === "adx" && <ADXTable results={filtered} />}
@@ -319,12 +320,14 @@ function TD({ children, mono, align = "left", color }: { children: React.ReactNo
 function TickerCell({ ticker }: { ticker: string }) {
   const navigate = useNavigate()
   return (
-    <td
-      className="px-5 py-2.5 font-semibold whitespace-nowrap cursor-pointer transition-colors"
-      style={{ color: "var(--color-accent)" }}
-      onClick={() => navigate(`/stock/${ticker}`)}
-    >
-      {ticker}
+    <td className="px-5 py-2.5 whitespace-nowrap">
+      <button
+        onClick={() => navigate(`/stock/${ticker}`)}
+        className="font-semibold cursor-pointer transition-colors bg-transparent border-none p-0"
+        style={{ color: "var(--color-accent)" }}
+      >
+        {ticker}
+      </button>
     </td>
   )
 }

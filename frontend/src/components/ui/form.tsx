@@ -9,7 +9,7 @@ export function FormError({ message }: FormErrorProps) {
       className="text-[11px] font-medium mb-2 px-2 py-1.5 rounded-md"
       style={{
         color: "var(--color-loss)",
-        backgroundColor: "rgba(244, 63, 94, 0.08)",
+        backgroundColor: "var(--loss-08)",
       }}
     >
       {message}

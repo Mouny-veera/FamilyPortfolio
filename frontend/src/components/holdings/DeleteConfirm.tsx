@@ -39,8 +39,8 @@ export function DeleteConfirm({ lot, onClose, onSuccess }: DeleteConfirmProps) {
         <div
           className="mx-4 my-2 p-4 rounded-xl animate-fade-in"
           style={{
-            backgroundColor: "rgba(244, 63, 94, 0.04)",
-            border: "1px solid rgba(244, 63, 94, 0.2)",
+            backgroundColor: "var(--loss-04)",
+            border: "1px solid var(--loss-20)",
             boxShadow: "var(--shadow-card)",
           }}
         >
@@ -48,8 +48,8 @@ export function DeleteConfirm({ lot, onClose, onSuccess }: DeleteConfirmProps) {
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
               style={{
-                background: "linear-gradient(135deg, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 100%)",
-                border: "1px solid rgba(244, 63, 94, 0.15)",
+                background: "var(--loss-gradient-12)",
+                border: "1px solid var(--loss-15)",
               }}
             >
               <AlertTriangle size={15} strokeWidth={2} style={{ color: "var(--color-loss)" }} />

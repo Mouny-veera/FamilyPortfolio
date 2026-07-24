@@ -117,7 +117,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                         to={`/holdings/${m.id}`}
                         className={({ isActive }) =>
                           cn(
-                            "flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[13px] transition-all duration-150",
+                            "flex items-center gap-2 px-2.5 py-1.5 min-h-[44px] lg:min-h-0 rounded-md text-[13px] transition-all duration-150",
                             isActive
                               ? "text-accent font-medium"
                               : "hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
