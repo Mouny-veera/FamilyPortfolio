@@ -1,6 +1,6 @@
 import { useState, useEffect, useId } from "react"
 import { api } from "@/lib/api"
-import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2 } from "lucide-react"
+import { RefreshCw, Database, CheckCircle2, AlertTriangle, X, Zap, KeyRound, Shield, XCircle, Loader2, Clock, Calendar } from "lucide-react"
 import { MembersSection } from "./MembersSection"
 
 interface ProviderInfo {
@@ -29,6 +29,9 @@ export function SettingsPage() {
   const [tokenStatus, setTokenStatus] = useState<{ connected: boolean; token_valid: boolean; message: string } | null>(null)
   const [tokenStatusLoading, setTokenStatusLoading] = useState(false)
 
+  const [autoScan, setAutoScan] = useState<{ enabled: boolean; scan_time: string; last_auto_scan: string | null; next_scan: string | null } | null>(null)
+  const [autoScanLoading, setAutoScanLoading] = useState(false)
+
   const checkTokenStatus = async () => {
     setTokenStatusLoading(true)
     try {
@@ -53,6 +56,7 @@ export function SettingsPage() {
         checkTokenStatus()
       }
     }).catch(console.error)
+    api.getAutoScan().then(setAutoScan).catch(console.error)
   }, [])
 
   useEffect(() => {
@@ -121,6 +125,19 @@ export function SettingsPage() {
       api.getDataProvider().then(setProviderInfo)
     } catch (e) {
       setFyersMsg({ type: "error", text: e instanceof Error ? e.message : "Failed" })
+    }
+  }
+
+  const handleAutoScanToggle = async () => {
+    if (!autoScan) return
+    setAutoScanLoading(true)
+    try {
+      const result = await api.setAutoScan(!autoScan.enabled)
+      setAutoScan(result)
+    } catch {
+      // revert optimistic state not needed — we didn't change it
+    } finally {
+      setAutoScanLoading(false)
     }
   }
 
@@ -484,6 +501,89 @@ export function SettingsPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Auto-Scan */}
+        <div className="rounded-xl p-5" style={cardStyle}>
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0) 100%)", border: "1px solid rgba(245, 158, 11, 0.15)" }}
+            >
+              <Clock size={14} strokeWidth={1.5} style={{ color: "var(--color-amber)" }} />
+            </div>
+            <h2 className="text-[13px] font-semibold" style={{ color: "var(--text-primary)" }}>
+              Auto-Scan
+            </h2>
+            {autoScan && (
+              <span
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-md ml-auto"
+                style={{
+                  backgroundColor: autoScan.enabled ? "rgba(16, 185, 129, 0.1)" : "rgba(148, 163, 184, 0.1)",
+                  color: autoScan.enabled ? "var(--color-profit)" : "var(--text-muted)",
+                }}
+              >
+                {autoScan.enabled ? "Active" : "Disabled"}
+              </span>
+            )}
+          </div>
+
+          <p className="text-[12px] mb-4" style={{ color: "var(--text-muted)" }}>
+            Automatically run the Nifty 200 scanner at market close every trading day. Results appear on the Scanner page.
+          </p>
+
+          {autoScan && (
+            <div className="space-y-3">
+              {/* Toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-medium" style={{ color: "var(--text-secondary)" }}>
+                  Daily scan at market close
+                </span>
+                <button
+                  onClick={handleAutoScanToggle}
+                  disabled={autoScanLoading}
+                  aria-label={autoScan.enabled ? "Disable auto-scan" : "Enable auto-scan"}
+                  className="relative w-11 h-6 rounded-full cursor-pointer transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: autoScan.enabled ? "var(--color-profit)" : "var(--border-color)",
+                  }}
+                >
+                  <span
+                    className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
+                    style={{
+                      transform: autoScan.enabled ? "translateX(20px)" : "translateX(0)",
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* Details */}
+              <div
+                className="rounded-lg p-3 space-y-2"
+                style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
+              >
+                <div className="flex items-center gap-2 text-[12px]">
+                  <Clock size={12} style={{ color: "var(--text-muted)" }} />
+                  <span className="font-medium" style={{ color: "var(--text-secondary)" }}>Scan time:</span>
+                  <span className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>{autoScan.scan_time}</span>
+                </div>
+                {autoScan.last_auto_scan && (
+                  <div className="flex items-center gap-2 text-[12px]">
+                    <CheckCircle2 size={12} style={{ color: "var(--color-profit)" }} />
+                    <span className="font-medium" style={{ color: "var(--text-secondary)" }}>Last scan:</span>
+                    <span className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>{autoScan.last_auto_scan}</span>
+                  </div>
+                )}
+                {autoScan.next_scan && (
+                  <div className="flex items-center gap-2 text-[12px]">
+                    <Calendar size={12} style={{ color: "var(--color-amber)" }} />
+                    <span className="font-medium" style={{ color: "var(--text-secondary)" }}>Next scan:</span>
+                    <span className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>{autoScan.next_scan}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

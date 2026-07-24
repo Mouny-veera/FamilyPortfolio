@@ -13,6 +13,13 @@ from .fibonacci_strategy import FibonacciRetracementStrategy
 from .pivot_strategy import PivotPointStrategy
 from .macd_strategy import MACDStrategy
 from .rsi_strategy import RSIStrategy
+from .supertrend_strategy import SuperTrendStrategy
+from .adx_strategy import ADXStrategy
+from .stochastic_strategy import StochasticStrategy
+from .rvol_strategy import RVOLStrategy
+from .bollinger_strategy import BollingerStrategy
+from .high52w_strategy import High52WStrategy
+from .composite import compute_composite
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 NIFTY200_FILE = DATA_DIR / "nifty200.json"
@@ -22,6 +29,12 @@ STRATEGIES: list[BaseStrategy] = [
     PivotPointStrategy(),
     MACDStrategy(),
     RSIStrategy(),
+    SuperTrendStrategy(),
+    ADXStrategy(),
+    StochasticStrategy(),
+    RVOLStrategy(),
+    BollingerStrategy(),
+    High52WStrategy(),
 ]
 
 _scan_lock = asyncio.Lock()
@@ -45,8 +58,10 @@ async def run_scan() -> list[dict]:
 
         provider = get_active_provider()
         end = date.today()
-        start = end - timedelta(days=180)
+        # 1Y lookback for 52W high strategy; other strategies use what they need
+        start = end - timedelta(days=365)
         results = []
+        composite_results = []
         errors = 0
 
         for ticker in universe:
@@ -54,6 +69,13 @@ async def run_scan() -> list[dict]:
                 ohlc = await provider.get_historical_ohlc(ticker, start, end)
                 if ohlc is None:
                     continue
+
+                ohlc = ohlc.dropna(subset=["open", "high", "low", "close"])
+                if len(ohlc) < 20:
+                    continue
+
+                ticker_scores: dict[str, float] = {}
+
                 for strategy in STRATEGIES:
                     try:
                         scan_score = await strategy.score(ticker, ohlc)
@@ -64,12 +86,30 @@ async def run_scan() -> list[dict]:
                                 "strategy_name": strategy.name,
                                 "metrics": scan_score.metrics,
                             })
+                            ticker_scores[strategy.name] = scan_score.score
                     except Exception as e:
                         print(f"Scanner {strategy.name} error for {ticker}: {e}")
+
+                # Compute composite if we have enough strategy data
+                if len(ticker_scores) >= 3:
+                    comp = compute_composite(ticker_scores)
+                    composite_results.append({
+                        "ticker": ticker,
+                        "score": comp["composite_score"],
+                        "strategy_name": "composite",
+                        "metrics": {
+                            "rating": comp["rating"],
+                            "category_scores": comp["category_scores"],
+                            "strategies_used": comp["strategies_used"],
+                            "current": results[-1]["metrics"].get("current") if results else None,
+                        },
+                    })
             except Exception as e:
                 errors += 1
                 print(f"Scanner fetch error for {ticker}: {e}")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.3)
+
+        results.extend(composite_results)
 
         success_rate = (len(universe) - errors) / len(universe) if universe else 0
         if success_rate < 0.5 and results:

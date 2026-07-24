@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from ..services.price_service import refresh_prices
 from ..services.market_data import load_config, save_config, get_active_provider, FyersProvider
 from ..services.fyers_auth import generate_fyers_token, exchange_auth_code
+from ..services.scan_scheduler import get_auto_scan_status, set_auto_scan_enabled
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -150,3 +151,18 @@ async def remove_fyers():
     config.pop("fyers", None)
     save_config(config)
     return {"status": "ok", "message": "Switched back to yfinance"}
+
+
+@router.get("/auto-scan")
+async def get_auto_scan():
+    return get_auto_scan_status()
+
+
+class AutoScanConfig(BaseModel):
+    enabled: bool
+
+
+@router.post("/auto-scan")
+async def update_auto_scan(cfg: AutoScanConfig):
+    set_auto_scan_enabled(cfg.enabled)
+    return get_auto_scan_status()

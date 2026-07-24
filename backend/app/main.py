@@ -13,6 +13,7 @@ from .services.price_service import start_polling, stop_polling
 from .services.nse_master import refresh_nse_master_list
 from .services.fyers_auth import ensure_valid_token
 from .services.fyers_callback import start_callback_server, stop_callback_server
+from .services.scan_scheduler import start_scan_scheduler, stop_scan_scheduler
 
 FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Manikandan", "Devi"]
 
@@ -37,7 +38,9 @@ async def lifespan(app: FastAPI):
     import asyncio
     nse_task = asyncio.create_task(refresh_nse_master_list())
     nse_task.add_done_callback(lambda t: t.exception() if not t.cancelled() and t.exception() else None)
+    start_scan_scheduler()
     yield
+    stop_scan_scheduler()
     stop_polling()
     await stop_callback_server()
 
