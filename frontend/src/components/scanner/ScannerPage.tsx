@@ -125,7 +125,7 @@ export function ScannerPage() {
             Technical analysis on Nifty 200 — 10 strategies, composite scoring
             {lastScan && (
               <span className="ml-2">
-                · Last scan {new Date(lastScan).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                · Last scan {new Date(lastScan).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })}
               </span>
             )}
           </p>
