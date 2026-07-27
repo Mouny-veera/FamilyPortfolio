@@ -48,35 +48,20 @@ function getChartColors(dark: boolean) {
   const muted = cssVar("--text-muted")
   const border = cssVar("--border-color")
   const elevated = cssVar("--bg-elevated")
-  return dark
-    ? {
-        bg: "transparent",
-        text: muted,
-        grid: "rgba(148, 163, 184, 0.06)",
-        border,
-        crosshair: "rgba(148, 163, 184, 0.3)",
-        labelBg: elevated,
-        upColor: profit,
-        downColor: loss,
-        upWick: profit,
-        downWick: loss,
-        volUp: "rgba(16, 185, 129, 0.2)",
-        volDown: "rgba(244, 63, 94, 0.2)",
-      }
-    : {
-        bg: "transparent",
-        text: muted,
-        grid: "rgba(0, 0, 0, 0.04)",
-        border,
-        crosshair: "rgba(0, 0, 0, 0.2)",
-        labelBg: "#57534E",
-        upColor: profit,
-        downColor: loss,
-        upWick: profit,
-        downWick: loss,
-        volUp: "rgba(5, 150, 105, 0.15)",
-        volDown: "rgba(225, 29, 72, 0.15)",
-      }
+  return {
+    bg: "transparent",
+    text: muted,
+    grid: cssVar("--chart-grid") || (dark ? "rgba(148, 163, 184, 0.06)" : "rgba(0, 0, 0, 0.04)"),
+    border,
+    crosshair: cssVar("--chart-crosshair") || (dark ? "rgba(148, 163, 184, 0.3)" : "rgba(0, 0, 0, 0.2)"),
+    labelBg: cssVar("--chart-label-bg") || elevated,
+    upColor: profit,
+    downColor: loss,
+    upWick: profit,
+    downWick: loss,
+    volUp: cssVar("--chart-vol-up") || (dark ? "rgba(16, 185, 129, 0.2)" : "rgba(5, 150, 105, 0.15)"),
+    volDown: cssVar("--chart-vol-down") || (dark ? "rgba(244, 63, 94, 0.2)" : "rgba(225, 29, 72, 0.15)"),
+  }
 }
 
 function toLineData(points: IndicatorPoint[]): LineData<Time>[] {

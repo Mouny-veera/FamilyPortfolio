@@ -71,6 +71,11 @@
   --shadow-destructive: 0 2px 6px rgba(244, 63, 94, 0.2);
   --shadow-info: 0 2px 8px rgba(99, 102, 241, 0.25);
   --color-info-light: #818CF8;
+  --chart-grid: rgba(0, 0, 0, 0.04);
+  --chart-crosshair: rgba(0, 0, 0, 0.2);
+  --chart-label-bg: #57534E;
+  --chart-vol-up: rgba(5, 150, 105, 0.15);
+  --chart-vol-down: rgba(225, 29, 72, 0.15);
 }
 
 .dark {
@@ -126,6 +131,11 @@
   --loss-gradient-12: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0) 100%);
   --warning-gradient-12: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0) 100%);
   --focus-ring: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  --chart-grid: rgba(148, 163, 184, 0.06);
+  --chart-crosshair: rgba(148, 163, 184, 0.3);
+  --chart-label-bg: var(--bg-elevated);
+  --chart-vol-up: rgba(16, 185, 129, 0.2);
+  --chart-vol-down: rgba(244, 63, 94, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -182,6 +192,11 @@
     --loss-gradient-12: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(244, 63, 94, 0) 100%);
     --warning-gradient-12: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0) 100%);
     --focus-ring: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    --chart-grid: rgba(148, 163, 184, 0.06);
+    --chart-crosshair: rgba(148, 163, 184, 0.3);
+    --chart-label-bg: var(--bg-elevated);
+    --chart-vol-up: rgba(16, 185, 129, 0.2);
+    --chart-vol-down: rgba(244, 63, 94, 0.2);
   }
 }
 

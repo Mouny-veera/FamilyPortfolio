@@ -328,7 +328,7 @@ export function SettingsPage() {
             <div className="space-y-3 mb-3">
               <div
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px]"
-                style={{ backgroundColor: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.15)" }}
+                style={{ backgroundColor: "var(--warning-04)", border: "1px solid var(--warning-15)" }}
               >
                 <AlertTriangle size={14} strokeWidth={2} style={{ color: "var(--color-amber)" }} />
                 <span style={{ color: "var(--text-primary)" }}>
