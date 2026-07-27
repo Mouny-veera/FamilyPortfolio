@@ -68,4 +68,4 @@ class RateLimiter:
         self._calls[key].append(now)
 
 
-scanner_limiter = RateLimiter(max_calls=1, window_seconds=300)
+scanner_limiter = RateLimiter(max_calls=1, window_seconds=1800)

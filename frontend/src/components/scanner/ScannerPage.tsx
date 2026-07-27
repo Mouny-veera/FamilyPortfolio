@@ -212,11 +212,25 @@ export function ScannerPage() {
     setScanning(true)
     try {
       await api.runScanner()
-      const fresh = await api.getScanResults()
-      setResults(fresh)
+      const poll = setInterval(async () => {
+        try {
+          const status = await api.getScanStatus()
+          if (!status.running) {
+            clearInterval(poll)
+            if (status.error) {
+              console.error("Scan error:", status.error)
+            }
+            const fresh = await api.getScanResults()
+            setResults(fresh)
+            setScanning(false)
+          }
+        } catch {
+          clearInterval(poll)
+          setScanning(false)
+        }
+      }, 5000)
     } catch (e) {
       console.error(e)
-    } finally {
       setScanning(false)
     }
   }
