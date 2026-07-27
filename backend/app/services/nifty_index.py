@@ -8,11 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
-NIFTY200_FILE = DATA_DIR / "nifty200.json"
+NIFTY500_FILE = DATA_DIR / "nifty500.json"
+LEGACY_FILE = DATA_DIR / "nifty200.json"
 
 NSE_URLS = [
-    "https://www.niftyindices.com/IndexConstituent/ind_nifty200list.csv",
-    "https://archives.nseindia.com/content/indices/ind_nifty200list.csv",
+    "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv",
+    "https://archives.nseindia.com/content/indices/ind_nifty500list.csv",
 ]
 
 _ssl_ctx = ssl.create_default_context()
@@ -35,15 +36,15 @@ def _fetch_from_nse() -> list[str]:
             if not symbol_col:
                 continue
             symbols = [row[symbol_col].strip() for row in reader if row[symbol_col].strip()]
-            if len(symbols) >= 150:
+            if len(symbols) >= 400:
                 return symbols
         except Exception as e:
-            print(f"[Nifty200] Fetch failed from {url}: {e}")
+            print(f"[Nifty500] Fetch failed from {url}: {e}")
     return []
 
 
 def _save_list(symbols: list[str]):
-    NIFTY200_FILE.write_text(json.dumps({
+    NIFTY500_FILE.write_text(json.dumps({
         "constituents": symbols,
         "count": len(symbols),
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -51,22 +52,30 @@ def _save_list(symbols: list[str]):
     }, indent=2))
 
 
-def load_nifty200() -> list[str]:
-    if NIFTY200_FILE.exists():
-        data = json.loads(NIFTY200_FILE.read_text())
+def load_nifty_universe() -> list[str]:
+    if NIFTY500_FILE.exists():
+        data = json.loads(NIFTY500_FILE.read_text())
+        return data.get("constituents", [])
+    if LEGACY_FILE.exists():
+        data = json.loads(LEGACY_FILE.read_text())
         return data.get("constituents", [])
     return []
 
 
-async def refresh_nifty200() -> dict:
+async def refresh_nifty_universe() -> dict:
     symbols = await asyncio.to_thread(_fetch_from_nse)
     if not symbols:
-        cached = load_nifty200()
+        cached = load_nifty_universe()
         if cached:
-            print(f"[Nifty200] Live fetch failed, using cached list ({len(cached)} stocks)")
+            print(f"[Nifty500] Live fetch failed, using cached list ({len(cached)} stocks)")
             return {"status": "cached", "count": len(cached)}
         return {"status": "error", "count": 0, "message": "No data available"}
 
     _save_list(symbols)
-    print(f"[Nifty200] Updated to {len(symbols)} stocks from NSE")
+    print(f"[Nifty500] Updated to {len(symbols)} stocks from NSE")
     return {"status": "ok", "count": len(symbols)}
+
+
+# Backward-compatible aliases
+load_nifty200 = load_nifty_universe
+refresh_nifty200 = refresh_nifty_universe

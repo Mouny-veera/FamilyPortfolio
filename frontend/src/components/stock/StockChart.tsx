@@ -17,7 +17,6 @@ import {
   type IndicatorId,
   type IndicatorPoint,
   INDICATORS,
-  computeSMA,
   computeEMA,
   computeRSI,
   computeMACD,
@@ -164,18 +163,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
     }
 
     // --- Overlay indicators on main pane ---
-    if (activeIndicators.has("sma20") && candles.length >= 20) {
-      const s = chart.addSeries(LineSeries, { color: getIndicatorColor("sma20"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
-      s.setData(toLineData(computeSMA(candles, 20)))
-    }
-    if (activeIndicators.has("sma50") && candles.length >= 50) {
-      const s = chart.addSeries(LineSeries, { color: getIndicatorColor("sma50"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
-      s.setData(toLineData(computeSMA(candles, 50)))
-    }
-    if (activeIndicators.has("sma200") && candles.length >= 200) {
-      const s = chart.addSeries(LineSeries, { color: getIndicatorColor("sma200"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
-      s.setData(toLineData(computeSMA(candles, 200)))
-    }
     if (activeIndicators.has("ema20") && candles.length >= 20) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("ema20"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeEMA(candles, 20)))
@@ -183,6 +170,14 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
     if (activeIndicators.has("ema50") && candles.length >= 50) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("ema50"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
       s.setData(toLineData(computeEMA(candles, 50)))
+    }
+    if (activeIndicators.has("ema100") && candles.length >= 100) {
+      const s = chart.addSeries(LineSeries, { color: getIndicatorColor("ema100"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
+      s.setData(toLineData(computeEMA(candles, 100)))
+    }
+    if (activeIndicators.has("ema200") && candles.length >= 200) {
+      const s = chart.addSeries(LineSeries, { color: getIndicatorColor("ema200"), lineWidth: 1, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })
+      s.setData(toLineData(computeEMA(candles, 200)))
     }
     if (activeIndicators.has("vwap") && candles.length > 0) {
       const s = chart.addSeries(LineSeries, { color: getIndicatorColor("vwap"), lineWidth: 1, lineStyle: 2, priceScaleId: "right", lastValueVisible: false, priceLineVisible: false })

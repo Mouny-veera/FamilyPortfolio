@@ -1,6 +1,24 @@
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Play, Loader2, Search, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { Play, Loader2, Search, TrendingUp, TrendingDown, Minus, GripVertical } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { api, type ScanResult } from "@/lib/api"
 import { formatNumber } from "@/lib/utils"
 import { PageError } from "@/components/ui/PageError"
@@ -40,36 +58,112 @@ type StrategyKey =
   | "fibonacci_retracement"
   | "bollinger"
   | "52w_high"
-  | "rvol"
+  | "52w_low"
   | "pivot_point"
 
-interface StrategyTab {
-  key: StrategyKey
-  label: string
-  category: string
-}
-
-const STRATEGY_TABS: StrategyTab[] = [
-  { key: "composite", label: "Composite", category: "overview" },
-  { key: "supertrend", label: "SuperTrend", category: "trend" },
-  { key: "adx", label: "ADX", category: "trend" },
-  { key: "rsi", label: "RSI", category: "momentum" },
-  { key: "macd", label: "MACD", category: "momentum" },
-  { key: "stochastic", label: "Stochastic", category: "momentum" },
-  { key: "fibonacci_retracement", label: "Fibonacci", category: "breakout" },
-  { key: "bollinger", label: "Bollinger", category: "breakout" },
-  { key: "52w_high", label: "52W High", category: "breakout" },
-  { key: "rvol", label: "RVOL", category: "volume" },
-  { key: "pivot_point", label: "Pivot", category: "support" },
+const DEFAULT_TAB_ORDER: StrategyKey[] = [
+  "fibonacci_retracement",
+  "bollinger",
+  "pivot_point",
+  "rsi",
+  "macd",
+  "52w_high",
+  "52w_low",
+  "supertrend",
+  "adx",
+  "composite",
+  "stochastic",
 ]
 
-const CATEGORY_LABELS: Record<string, string> = {
-  overview: "Overview",
-  trend: "Trend",
-  momentum: "Momentum",
-  breakout: "Breakout",
-  volume: "Volume",
-  support: "Support",
+const TAB_META: Record<StrategyKey, { label: string }> = {
+  fibonacci_retracement: { label: "Fibonacci" },
+  bollinger: { label: "Bollinger" },
+  pivot_point: { label: "Pivot Point" },
+  rsi: { label: "RSI" },
+  macd: { label: "MACD" },
+  "52w_high": { label: "52W High" },
+  "52w_low": { label: "52W Low" },
+  supertrend: { label: "SuperTrend" },
+  adx: { label: "ADX" },
+  composite: { label: "Composite" },
+  stochastic: { label: "Stochastic" },
+}
+
+const TAB_ORDER_KEY = "fp-scanner-tab-order"
+
+function loadTabOrder(): StrategyKey[] {
+  try {
+    const saved = localStorage.getItem(TAB_ORDER_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved) as StrategyKey[]
+      if (Array.isArray(parsed) && parsed.length === DEFAULT_TAB_ORDER.length && parsed.every(k => k in TAB_META)) {
+        return parsed
+      }
+    }
+  } catch { /* ignore */ }
+  return [...DEFAULT_TAB_ORDER]
+}
+
+function saveTabOrder(order: StrategyKey[]) {
+  localStorage.setItem(TAB_ORDER_KEY, JSON.stringify(order))
+}
+
+function SortableTab({ id, label, count, isActive, onClick }: {
+  id: StrategyKey
+  label: string
+  count: number
+  isActive: boolean
+  onClick: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center">
+      <button
+        id={`tab-${id}`}
+        role="tab"
+        aria-selected={isActive}
+        aria-controls={`tabpanel-${id}`}
+        onClick={onClick}
+        className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] lg:min-h-0 rounded-md text-[12px] font-medium cursor-pointer transition-all duration-200 whitespace-nowrap"
+        style={{
+          backgroundColor: isActive ? "var(--bg-card)" : "transparent",
+          color: isActive ? "var(--text-primary)" : "var(--text-muted)",
+          boxShadow: isActive ? "var(--shadow-card)" : "none",
+          border: isActive ? "1px solid var(--border-color)" : "1px solid transparent",
+        }}
+      >
+        <span
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none flex items-center"
+          style={{ color: "var(--text-muted)", opacity: 0.4 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical size={12} strokeWidth={2} />
+        </span>
+        {id === "composite" && <TrendingUp size={13} strokeWidth={2} />}
+        {label}
+        {count > 0 && (
+          <span
+            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+            style={{
+              backgroundColor: isActive ? "var(--accent-10)" : "var(--bg-secondary)",
+              color: isActive ? "var(--color-profit)" : "var(--text-muted)",
+            }}
+          >
+            {count}
+          </span>
+        )}
+      </button>
+    </div>
+  )
 }
 
 export function ScannerPage() {
@@ -77,7 +171,27 @@ export function ScannerPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
-  const [activeTab, setActiveTab] = useState<StrategyKey>("composite")
+  const [activeTab, setActiveTab] = useState<StrategyKey>("fibonacci_retracement")
+  const [tabOrder, setTabOrder] = useState<StrategyKey[]>(loadTabOrder)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setTabOrder((prev) => {
+        const oldIndex = prev.indexOf(active.id as StrategyKey)
+        const newIndex = prev.indexOf(over.id as StrategyKey)
+        const next = arrayMove(prev, oldIndex, newIndex)
+        saveTabOrder(next)
+        return next
+      })
+    }
+  }
 
   const fetchResults = useCallback(() => {
     api.getScanResults()
@@ -122,7 +236,7 @@ export function ScannerPage() {
             Scanner
           </h1>
           <p className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-            Technical analysis on Nifty 200 — 10 strategies, composite scoring
+            Technical analysis on Nifty 500 — 11 strategies, composite scoring
             {lastScan && (
               <span className="ml-2">
                 · Last scan {new Date(lastScan).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })}
@@ -151,7 +265,7 @@ export function ScannerPage() {
         >
           <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: "var(--accent-15)", borderTopColor: "var(--color-profit)" }} />
           <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
-            Scanning Nifty 200 across 10 strategies...
+            Scanning Nifty 500 across 11 strategies...
           </p>
           <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
             This may take a few minutes due to rate limits.
@@ -166,7 +280,7 @@ export function ScannerPage() {
         >
           <Search size={28} strokeWidth={1.5} className="mx-auto mb-3" style={{ color: "var(--text-muted)", opacity: 0.5 }} />
           <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>No scan results yet</p>
-          <p className="text-[12px] mt-1 mb-4" style={{ color: "var(--text-muted)" }}>Run the scanner to find top picks across 10 strategies.</p>
+          <p className="text-[12px] mt-1 mb-4" style={{ color: "var(--text-muted)" }}>Run the scanner to find top picks across 11 strategies.</p>
           <button
             onClick={handleScan}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
@@ -183,75 +297,33 @@ export function ScannerPage() {
 
       {results.length > 0 && (
         <>
-          {/* Strategy Tabs — grouped by category */}
+          {/* Strategy Tabs — drag to reorder */}
           <div className="mb-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-            <div
-              className="flex gap-1 p-1 rounded-lg w-max min-w-full"
-              role="tablist"
-              aria-label="Scanner strategies"
-              style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
-            >
-              {(() => {
-                let lastCategory = ""
-                return STRATEGY_TABS.map((tab) => {
-                  const count = results.filter((r) => r.strategy_name === tab.key).length
-                  const isActive = activeTab === tab.key
-                  const showDivider = tab.category !== lastCategory && lastCategory !== ""
-                  lastCategory = tab.category
-                  return (
-                    <div key={tab.key} className="flex items-center">
-                      {showDivider && (
-                        <div
-                          className="w-px h-5 mx-0.5 flex-shrink-0"
-                          style={{ backgroundColor: "var(--border-color)" }}
-                        />
-                      )}
-                      <button
-                        id={`tab-${tab.key}`}
-                        role="tab"
-                        aria-selected={isActive}
-                        aria-controls={`tabpanel-${tab.key}`}
-                        onClick={() => setActiveTab(tab.key)}
-                        className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] lg:min-h-0 rounded-md text-[12px] font-medium cursor-pointer transition-all duration-200 whitespace-nowrap"
-                        style={{
-                          backgroundColor: isActive ? "var(--bg-card)" : "transparent",
-                          color: isActive ? "var(--text-primary)" : "var(--text-muted)",
-                          boxShadow: isActive ? "var(--shadow-card)" : "none",
-                          border: isActive ? "1px solid var(--border-color)" : "1px solid transparent",
-                        }}
-                      >
-                        {tab.key === "composite" && <TrendingUp size={13} strokeWidth={2} />}
-                        {tab.label}
-                        {count > 0 && (
-                          <span
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
-                            style={{
-                              backgroundColor: isActive ? "var(--accent-10)" : "var(--bg-secondary)",
-                              color: isActive ? "var(--color-profit)" : "var(--text-muted)",
-                            }}
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  )
-                })
-              })()}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
+                <div
+                  className="flex gap-1 p-1 rounded-lg w-max min-w-full"
+                  role="tablist"
+                  aria-label="Scanner strategies"
+                  style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
+                >
+                  {tabOrder.map((key) => (
+                    <SortableTab
+                      key={key}
+                      id={key}
+                      label={TAB_META[key].label}
+                      count={results.filter((r) => r.strategy_name === key).length}
+                      isActive={activeTab === key}
+                      onClick={() => setActiveTab(key)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
 
-          {/* Category label */}
+          {/* Result count */}
           <div className="flex items-center gap-2 mb-3">
-            <span
-              className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded"
-              style={{
-                color: "var(--text-muted)",
-                backgroundColor: "var(--bg-secondary)",
-              }}
-            >
-              {CATEGORY_LABELS[STRATEGY_TABS.find((t) => t.key === activeTab)?.category || ""] || ""}
-            </span>
             <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
               {filtered.length} results
             </span>
@@ -279,7 +351,7 @@ export function ScannerPage() {
                 {activeTab === "fibonacci_retracement" && <FibTable results={filtered} />}
                 {activeTab === "bollinger" && <BollingerTable results={filtered} />}
                 {activeTab === "52w_high" && <High52WTable results={filtered} />}
-                {activeTab === "rvol" && <RVOLTable results={filtered} />}
+                {activeTab === "52w_low" && <Low52WTable results={filtered} />}
                 {activeTab === "pivot_point" && <PivotTable results={filtered} />}
               </div>
             )}
@@ -447,7 +519,7 @@ function CompositeTable({ results }: { results: ScanResult[] }) {
                 </div>
               </td>
               <TD mono align="right" color="var(--text-muted)">
-                {num(m.strategies_used) ?? 0}/10
+                {num(m.strategies_used) ?? 0}/11
               </TD>
             </tr>
           )
@@ -837,48 +909,48 @@ function High52WTable({ results }: { results: ScanResult[] }) {
 }
 
 /* ────────────────────────────────────────────────────────────────
-   RVOL Table
+   52W Low Table
    ──────────────────────────────────────────────────────────────── */
 
-function RVOLTable({ results }: { results: ScanResult[] }) {
+function Low52WTable({ results }: { results: ScanResult[] }) {
   return (
-    <table className="w-full text-[13px] min-w-[850px]">
+    <table className="w-full text-[13px] min-w-[900px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
-          <TH align="right">RVOL</TH>
-          <TH align="right">Volume</TH>
-          <TH align="right">Avg Vol (20)</TH>
-          <TH align="right">Price Chg</TH>
-          <TH align="center">OBV</TH>
+          <TH align="right">52W Low</TH>
+          <TH align="right">52W High</TH>
+          <TH align="right">From Low</TH>
+          <TH align="right">Range %</TH>
           <TH align="center">Signal</TH>
         </tr>
       </thead>
       <tbody>
         {results.map((r, i) => {
           const m = (r.metrics || {}) as Record<string, unknown>
-          const rvol = num(m.rvol)
-          const rvolVal = rvol ?? 0
-          const priceChg = num(m.price_change_pct)
-          const priceChgVal = priceChg ?? 0
+          const pctFromLow = num(m.pct_from_low)
+          const rangePos = num(m.range_position)
+          const rangePosVal = rangePos ?? 0
           const signal = safeStr(m.signal)
-          const variant = signal.includes("bullish") || signal === "accumulation" || signal === "rising_volume"
-            ? "bullish"
-            : signal.includes("bearish")
-              ? "bearish"
-              : signal === "low_volume" ? "warning" : "neutral"
+          const variant = signal.includes("new_low") || signal === "near_low"
+            ? "bearish"
+            : signal === "near_low_recovering"
+              ? "warning"
+              : signal === "within_10pct" || signal === "lower_range"
+                ? "bullish"
+                : "neutral"
           const signalLabel: Record<string, string> = {
-            extreme_volume_bullish: "Extreme Vol ↑",
-            high_volume_bullish: "High Vol ↑",
-            accumulation: "Accumulation",
-            high_volume_bearish: "High Vol ↓",
-            extreme_volume_bearish: "Extreme Vol ↓",
-            rising_volume: "Rising Volume",
-            low_volume: "Low Volume",
-            normal: "Normal",
+            new_low_volume: "New Low + Vol",
+            new_low: "New Low",
+            near_low: "Near Low",
+            near_low_recovering: "Near Low ↑",
+            within_10pct: "Within 10%",
+            lower_range: "Lower Range",
+            lower_half: "Lower Half",
+            upper_half: "Upper Half",
           }
           return (
             <tr
@@ -890,26 +962,29 @@ function RVOLTable({ results }: { results: ScanResult[] }) {
               <TickerCell ticker={r.ticker} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <td
-                className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold"
-                style={{ color: rvolVal >= 2 ? "var(--color-profit)" : rvolVal < 0.5 ? "var(--color-loss)" : "var(--text-primary)" }}
-              >
-                {rvol !== null ? `${rvol.toFixed(2)}x` : "—"}
-              </td>
-              <TD mono align="right">{num(m.current_volume) !== null ? formatNumber(num(m.current_volume)!) : "—"}</TD>
-              <TD mono align="right">{num(m.avg_volume_20) !== null ? formatNumber(num(m.avg_volume_20)!) : "—"}</TD>
+              <TD mono align="right">{fmtPrice(m.low_52w)}</TD>
+              <TD mono align="right">{fmtPrice(m.high_52w)}</TD>
               <td
                 className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap"
-                style={{ color: priceChgVal > 0 ? "var(--color-profit)" : priceChgVal < 0 ? "var(--color-loss)" : "var(--text-muted)" }}
+                style={{ color: pctFromLow !== null && pctFromLow <= 5 ? "var(--color-loss)" : pctFromLow !== null && pctFromLow >= 20 ? "var(--color-profit)" : "var(--text-primary)" }}
               >
-                {fmtPct(m.price_change_pct, 2, true)}
+                {fmtPct(m.pct_from_low, 1, true)}
               </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                {m.obv_above_sma ? (
-                  <span className="text-[11px] font-medium" style={{ color: "var(--color-profit)" }}>▲ Above</span>
-                ) : (
-                  <span className="text-[11px] font-medium" style={{ color: "var(--color-loss)" }}>▼ Below</span>
-                )}
+              <td className="px-5 py-2.5 text-right whitespace-nowrap">
+                <div className="flex items-center gap-2 justify-end">
+                  <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(2, rangePosVal * 100)}%`,
+                        backgroundColor: rangePosVal < 0.3 ? "var(--color-loss)" : rangePosVal > 0.7 ? "var(--color-profit)" : "var(--text-muted)",
+                      }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>
+                    {fmt(rangePos !== null ? rangePos * 100 : null, 0)}%
+                  </span>
+                </div>
               </td>
               <td className="px-5 py-2.5 text-center whitespace-nowrap">
                 <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />

@@ -165,14 +165,16 @@ async def manual_refresh_nifty200():
 async def nifty200_status():
     import json
     from pathlib import Path
-    nifty_file = Path(__file__).resolve().parent.parent.parent.parent / "data" / "nifty200.json"
-    if nifty_file.exists():
-        data = json.loads(nifty_file.read_text())
-        return {
-            "count": data.get("count", len(data.get("constituents", []))),
-            "updated_at": data.get("updated_at"),
-            "source": data.get("source", "static file"),
-        }
+    data_dir = Path(__file__).resolve().parent.parent.parent.parent / "data"
+    for fname in ("nifty500.json", "nifty200.json"):
+        nifty_file = data_dir / fname
+        if nifty_file.exists():
+            data = json.loads(nifty_file.read_text())
+            return {
+                "count": data.get("count", len(data.get("constituents", []))),
+                "updated_at": data.get("updated_at"),
+                "source": data.get("source", "static file"),
+            }
     return {"count": 0, "updated_at": None, "source": "none"}
 
 

@@ -209,7 +209,7 @@ export function computeVWAP(candles: StockCandle[]): IndicatorPoint[] {
   return result
 }
 
-export type IndicatorId = "sma20" | "sma50" | "sma200" | "ema20" | "ema50" | "bollinger" | "vwap" | "rsi" | "macd" | "volume"
+export type IndicatorId = "ema20" | "ema50" | "ema100" | "ema200" | "bollinger" | "vwap" | "rsi" | "macd" | "volume"
 
 export interface IndicatorConfig {
   id: IndicatorId
@@ -221,11 +221,10 @@ export interface IndicatorConfig {
 }
 
 export const INDICATORS: IndicatorConfig[] = [
-  { id: "sma20", label: "SMA 20", shortLabel: "SMA20", group: "overlay", color: "#F59E0B", description: "20-day simple moving average" },
-  { id: "sma50", label: "SMA 50", shortLabel: "SMA50", group: "overlay", color: "#3B82F6", description: "50-day simple moving average" },
-  { id: "sma200", label: "SMA 200", shortLabel: "SMA200", group: "overlay", color: "#8B5CF6", description: "200-day simple moving average" },
   { id: "ema20", label: "EMA 20", shortLabel: "EMA20", group: "overlay", color: "#EC4899", description: "20-day exponential moving average" },
   { id: "ema50", label: "EMA 50", shortLabel: "EMA50", group: "overlay", color: "#14B8A6", description: "50-day exponential moving average" },
+  { id: "ema100", label: "EMA 100", shortLabel: "EMA100", group: "overlay", color: "#3B82F6", description: "100-day exponential moving average" },
+  { id: "ema200", label: "EMA 200", shortLabel: "EMA200", group: "overlay", color: "#8B5CF6", description: "200-day exponential moving average" },
   { id: "bollinger", label: "Bollinger Bands", shortLabel: "BB", group: "overlay", color: "#6366F1", description: "20-period bands with 2x std deviation" },
   { id: "vwap", label: "VWAP", shortLabel: "VWAP", group: "overlay", color: "#F97316", description: "Volume weighted average price" },
   { id: "volume", label: "Volume", shortLabel: "Vol", group: "volume", color: "#64748B", description: "Trading volume bars" },

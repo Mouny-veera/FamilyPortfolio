@@ -6,7 +6,7 @@ from sqlalchemy import delete
 from ..database import async_session
 from ..models import ScanResult
 from ..services.market_data import get_active_provider
-from ..services.nifty_index import refresh_nifty200, load_nifty200
+from ..services.nifty_index import refresh_nifty_universe, load_nifty_universe
 from .base_strategy import BaseStrategy
 from .fibonacci_strategy import FibonacciRetracementStrategy
 from .pivot_strategy import PivotPointStrategy
@@ -18,6 +18,7 @@ from .stochastic_strategy import StochasticStrategy
 from .rvol_strategy import RVOLStrategy
 from .bollinger_strategy import BollingerStrategy
 from .high52w_strategy import High52WStrategy
+from .low52w_strategy import Low52WStrategy
 from .composite import compute_composite
 
 STRATEGIES: list[BaseStrategy] = [
@@ -31,6 +32,7 @@ STRATEGIES: list[BaseStrategy] = [
     RVOLStrategy(),
     BollingerStrategy(),
     High52WStrategy(),
+    Low52WStrategy(),
 ]
 
 _scan_lock = asyncio.Lock()
@@ -42,12 +44,12 @@ async def run_scan() -> list[dict]:
 
     async with _scan_lock:
         try:
-            await refresh_nifty200()
+            await refresh_nifty_universe()
         except Exception as e:
-            print(f"[Scanner] Nifty 200 refresh failed, using cached: {e}")
-        universe = load_nifty200()
+            print(f"[Scanner] Nifty 500 refresh failed, using cached: {e}")
+        universe = load_nifty_universe()
         if not universe:
-            raise RuntimeError("Scanner universe is empty — check data/nifty200.json")
+            raise RuntimeError("Scanner universe is empty — check data/nifty500.json")
 
         provider = get_active_provider()
         end = date.today()

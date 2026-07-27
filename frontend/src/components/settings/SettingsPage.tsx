@@ -505,7 +505,7 @@ export function SettingsPage() {
             ))}
           </div>
 
-          {/* Scanner Universe — Nifty 200 */}
+          {/* Scanner Universe — Nifty 500 */}
           <div
             className="mt-3 rounded-lg p-3"
             style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
@@ -536,7 +536,7 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>
-                Nifty 200 — <span className="font-semibold">{niftyStatus?.count ?? "..."}</span> stocks
+                Nifty 500 — <span className="font-semibold">{niftyStatus?.count ?? "..."}</span> stocks
               </span>
               <span
                 className="text-[10px] font-medium px-1.5 py-0.5 rounded"
@@ -582,7 +582,7 @@ export function SettingsPage() {
           </div>
 
           <p className="text-[12px] mb-4" style={{ color: "var(--text-muted)" }}>
-            Automatically run the Nifty 200 scanner at market close every trading day. Results appear on the Scanner page.
+            Automatically run the Nifty 500 scanner at market close every trading day. Results appear on the Scanner page.
           </p>
 
           {autoScan && (
