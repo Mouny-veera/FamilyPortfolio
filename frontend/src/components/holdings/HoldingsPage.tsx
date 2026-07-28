@@ -1,12 +1,147 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useParams } from "react-router-dom"
-import { Plus, Search, X } from "lucide-react"
-import { api, type MemberHoldings, type RealizedPnL } from "@/lib/api"
+import { Plus, Search, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react"
+import { api, type MemberHoldings, type LotGroup as LotGroupType, type RealizedPnL } from "@/lib/api"
 import { formatCurrency, formatPct, formatDate, formatNumber, filterAndSortByTicker } from "@/lib/utils"
 import { MetricCards } from "./MetricCards"
 import { LotGroup } from "./LotGroup"
 import { BuyForm } from "./BuyForm"
 import { PageError } from "@/components/ui/PageError"
+
+type HoldingSortField = "ticker" | "pnl_pct" | "pnl" | "invested" | "value" | "qty"
+type SortDir = "asc" | "desc"
+type PnlSortField = "ticker" | "buy_date" | "buy_qty" | "buy_rate" | "buy_value" | "sell_date" | "sell_rate" | "sell_value" | "profit_loss" | "profit_loss_pct"
+
+const HOLDING_SORT_OPTIONS: { field: HoldingSortField; label: string }[] = [
+  { field: "pnl_pct", label: "Profit %" },
+  { field: "pnl", label: "P/L" },
+  { field: "invested", label: "Invested" },
+  { field: "value", label: "Value" },
+  { field: "qty", label: "Qty" },
+  { field: "ticker", label: "Ticker" },
+]
+
+function getHoldingSortValue(group: LotGroupType, field: HoldingSortField): number | string {
+  switch (field) {
+    case "pnl_pct": return group.unrealized_pnl_pct ?? -Infinity
+    case "pnl": return group.unrealized_pnl ?? -Infinity
+    case "invested": return group.total_invested
+    case "value": return group.current_value ?? -Infinity
+    case "qty": return group.total_qty
+    case "ticker": return group.ticker
+  }
+}
+
+function sortHoldings(items: LotGroupType[], field: HoldingSortField, dir: SortDir): LotGroupType[] {
+  return [...items].sort((a, b) => {
+    const av = getHoldingSortValue(a, field)
+    const bv = getHoldingSortValue(b, field)
+    if (typeof av === "string" && typeof bv === "string") {
+      return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av)
+    }
+    const diff = (av as number) - (bv as number)
+    return dir === "asc" ? diff : -diff
+  })
+}
+
+function SortChips({
+  active,
+  dir,
+  onSort,
+}: {
+  active: HoldingSortField
+  dir: SortDir
+  onSort: (field: HoldingSortField) => void
+}) {
+  return (
+    <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 -mx-1 px-1" role="toolbar" aria-label="Sort holdings">
+      {HOLDING_SORT_OPTIONS.map((opt) => {
+        const isActive = active === opt.field
+        return (
+          <button
+            key={opt.field}
+            onClick={() => onSort(opt.field)}
+            aria-pressed={isActive}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap cursor-pointer transition-all duration-150 shrink-0"
+            style={{
+              backgroundColor: isActive ? "var(--accent-15)" : "var(--bg-secondary)",
+              color: isActive ? "var(--color-accent)" : "var(--text-muted)",
+              border: isActive ? "1px solid var(--accent-20)" : "1px solid transparent",
+            }}
+          >
+            {opt.label}
+            {isActive && (dir === "desc"
+              ? <ArrowDown size={11} strokeWidth={2.5} />
+              : <ArrowUp size={11} strokeWidth={2.5} />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function getPnlSortValue(pnl: RealizedPnL, field: PnlSortField): number | string {
+  switch (field) {
+    case "ticker": return pnl.ticker
+    case "buy_date": return pnl.buy_date
+    case "sell_date": return pnl.sell_date
+    case "buy_qty": return pnl.buy_qty
+    case "buy_rate": return pnl.buy_rate
+    case "buy_value": return pnl.buy_value
+    case "sell_rate": return pnl.sell_rate
+    case "sell_value": return pnl.sell_value
+    case "profit_loss": return pnl.profit_loss
+    case "profit_loss_pct": return pnl.profit_loss_pct
+  }
+}
+
+function sortPnl(items: RealizedPnL[], field: PnlSortField, dir: SortDir): RealizedPnL[] {
+  return [...items].sort((a, b) => {
+    const av = getPnlSortValue(a, field)
+    const bv = getPnlSortValue(b, field)
+    if (typeof av === "string" && typeof bv === "string") {
+      return dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av)
+    }
+    const diff = (av as number) - (bv as number)
+    return dir === "asc" ? diff : -diff
+  })
+}
+
+function SortableHeader({
+  label,
+  field,
+  active,
+  dir,
+  align,
+  onSort,
+}: {
+  label: string
+  field: PnlSortField
+  active: PnlSortField
+  dir: SortDir
+  align: "left" | "right"
+  onSort: (field: PnlSortField) => void
+}) {
+  const isActive = active === field
+  return (
+    <th
+      scope="col"
+      onClick={() => onSort(field)}
+      className={`${align === "right" ? "text-right" : "text-left"} px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none transition-colors duration-150`}
+      style={{ color: isActive ? "var(--color-accent)" : "var(--text-muted)" }}
+      aria-sort={isActive ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {isActive
+          ? (dir === "desc" ? <ArrowDown size={10} strokeWidth={2.5} /> : <ArrowUp size={10} strokeWidth={2.5} />)
+          : <ArrowUpDown size={10} strokeWidth={2} style={{ opacity: 0.4 }} />
+        }
+      </span>
+    </th>
+  )
+}
 
 function PnLSummary({ data }: { data: RealizedPnL[] }) {
   if (data.length === 0) return null
@@ -48,7 +183,22 @@ export function HoldingsPage() {
   const [showBuy, setShowBuy] = useState(false)
   const [search, setSearch] = useState("")
 
+  const [holdingSort, setHoldingSort] = useState<HoldingSortField>("pnl_pct")
+  const [holdingSortDir, setHoldingSortDir] = useState<SortDir>("desc")
+  const [pnlSort, setPnlSort] = useState<PnlSortField>("sell_date")
+  const [pnlSortDir, setPnlSortDir] = useState<SortDir>("desc")
+
   const id = parseInt(memberId || "0")
+
+  const handleHoldingSort = useCallback((field: HoldingSortField) => {
+    setHoldingSortDir((prev) => holdingSort === field ? (prev === "desc" ? "asc" : "desc") : "desc")
+    setHoldingSort(field)
+  }, [holdingSort])
+
+  const handlePnlSort = useCallback((field: PnlSortField) => {
+    setPnlSortDir((prev) => pnlSort === field ? (prev === "desc" ? "asc" : "desc") : "desc")
+    setPnlSort(field)
+  }, [pnlSort])
 
   const fetchData = useCallback(async () => {
     if (!id) {
@@ -80,14 +230,17 @@ export function HoldingsPage() {
   }, [fetchData])
 
   const q = search.trim()
-  const filteredHoldings = useMemo(
-    () => data ? filterAndSortByTicker(data.holdings, q) : [],
-    [data, q],
-  )
-  const filteredPnl = useMemo(
-    () => data ? filterAndSortByTicker(data.realized_pnl, q) : [],
-    [data, q],
-  )
+  const filteredHoldings = useMemo(() => {
+    if (!data) return []
+    const filtered = filterAndSortByTicker(data.holdings, q)
+    return sortHoldings(filtered, holdingSort, holdingSortDir)
+  }, [data, q, holdingSort, holdingSortDir])
+
+  const filteredPnl = useMemo(() => {
+    if (!data) return []
+    const filtered = filterAndSortByTicker(data.realized_pnl, q)
+    return sortPnl(filtered, pnlSort, pnlSortDir)
+  }, [data, q, pnlSort, pnlSortDir])
 
   if (loading) {
     return (
@@ -209,6 +362,7 @@ export function HoldingsPage() {
 
       {tab === "active" && (
         <div key="active" className="animate-tab-content">
+          <SortChips active={holdingSort} dir={holdingSortDir} onSort={handleHoldingSort} />
           {filteredHoldings.length === 0 ? (
             <div
               className="text-center py-16 rounded-xl"
@@ -254,16 +408,16 @@ export function HoldingsPage() {
               <table className="w-full text-[13px] min-w-[900px]">
                 <thead>
                   <tr style={{ backgroundColor: "var(--bg-elevated)" }}>
-                    <th scope="col" className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Ticker</th>
-                    <th scope="col" className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Date</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Qty</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Rate</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Value</th>
-                    <th scope="col" className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Date</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Rate</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Sell Value</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</th>
-                    <th scope="col" className="text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>%</th>
+                    <SortableHeader label="Ticker" field="ticker" active={pnlSort} dir={pnlSortDir} align="left" onSort={handlePnlSort} />
+                    <SortableHeader label="Buy Date" field="buy_date" active={pnlSort} dir={pnlSortDir} align="left" onSort={handlePnlSort} />
+                    <SortableHeader label="Buy Qty" field="buy_qty" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
+                    <SortableHeader label="Buy Rate" field="buy_rate" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
+                    <SortableHeader label="Buy Value" field="buy_value" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
+                    <SortableHeader label="Sell Date" field="sell_date" active={pnlSort} dir={pnlSortDir} align="left" onSort={handlePnlSort} />
+                    <SortableHeader label="Sell Rate" field="sell_rate" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
+                    <SortableHeader label="Sell Value" field="sell_value" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
+                    <SortableHeader label="P/L" field="profit_loss" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
+                    <SortableHeader label="%" field="profit_loss_pct" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
                   </tr>
                 </thead>
                 <tbody>
