@@ -112,7 +112,7 @@ function IndicatorPanel({
               className="font-mono tabular-nums text-[10px] px-1.5 py-0.5 rounded-full"
               style={{
                 backgroundColor: expanded ? "rgba(255,255,255,0.2)" : "var(--accent-10)",
-                color: expanded ? "#fff" : "var(--color-accent)",
+                color: expanded ? "var(--bg-card)" : "var(--color-accent)",
               }}
             >
               {active.size}

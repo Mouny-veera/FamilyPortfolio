@@ -8,6 +8,19 @@ import { LotGroup } from "./LotGroup"
 import { BuyForm } from "./BuyForm"
 import { PageError } from "@/components/ui/PageError"
 
+const textMuted = { color: "var(--text-muted)" } as const
+const textPrimary = { color: "var(--text-primary)" } as const
+const textSecondary = { color: "var(--text-secondary)" } as const
+const bgElevated = { backgroundColor: "var(--bg-elevated)" } as const
+const bgSecondary = { backgroundColor: "var(--bg-secondary)" } as const
+const bgCardBordered = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" } as const
+const cardStyle = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" } as const
+const borderedCardShadow = { border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" } as const
+const dashedBorder = { border: "1px dashed var(--border-color)" } as const
+const searchInputStyle = { border: "1px solid var(--border-color)", color: "var(--text-primary)" } as const
+const addBuyButtonStyle = { background: "var(--gradient-accent)", boxShadow: "var(--shadow-accent)" } as const
+const arrowOpacity = { opacity: 0.4 } as const
+
 type HoldingSortField = "ticker" | "pnl_pct" | "pnl" | "invested" | "value" | "qty"
 type SortDir = "asc" | "desc"
 type PnlSortField = "ticker" | "buy_date" | "buy_qty" | "buy_rate" | "buy_value" | "sell_date" | "sell_rate" | "sell_value" | "profit_loss" | "profit_loss_pct"
@@ -136,7 +149,7 @@ function SortableHeader({
         {label}
         {isActive
           ? (dir === "desc" ? <ArrowDown size={10} strokeWidth={2.5} /> : <ArrowUp size={10} strokeWidth={2.5} />)
-          : <ArrowUpDown size={10} strokeWidth={2} style={{ opacity: 0.4 }} />
+          : <ArrowUpDown size={10} strokeWidth={2} style={arrowOpacity} />
         }
       </span>
     </th>
@@ -148,24 +161,23 @@ function PnLSummary({ data }: { data: RealizedPnL[] }) {
   const totalBuyValue = data.reduce((s, p) => s + p.buy_value, 0)
   const totalPnL = data.reduce((s, p) => s + p.profit_loss, 0)
   const totalPnLPct = totalBuyValue ? (totalPnL / totalBuyValue) * 100 : 0
-  const cardStyle = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
       <div className="rounded-xl p-4" style={cardStyle}>
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Total Buy Value</p>
-        <p className="text-xl font-mono font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={textMuted}>Total Buy Value</p>
+        <p className="text-xl font-mono font-semibold tabular-nums" style={textPrimary}>
           {formatCurrency(totalBuyValue)}
         </p>
       </div>
       <div className="rounded-xl p-4" style={cardStyle}>
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Total Realized P/L</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={textMuted}>Total Realized P/L</p>
         <p className="text-xl font-mono font-semibold tabular-nums" style={{ color: totalPnL >= 0 ? "var(--color-profit)" : "var(--color-loss)" }}>
           {formatCurrency(totalPnL)}
         </p>
       </div>
       <div className="rounded-xl p-4" style={cardStyle}>
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>Total P/L %</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={textMuted}>Total P/L %</p>
         <p className="text-xl font-mono font-semibold tabular-nums" style={{ color: totalPnLPct >= 0 ? "var(--color-profit)" : "var(--color-loss)" }}>
           {formatPct(totalPnLPct)}
         </p>
@@ -246,22 +258,22 @@ export function HoldingsPage() {
     return (
       <div className="animate-page-enter">
         <div className="flex items-center justify-between mb-6">
-          <div className="h-7 w-28 rounded-md" style={{ backgroundColor: "var(--bg-elevated)" }} />
-          <div className="h-9 w-24 rounded-lg" style={{ backgroundColor: "var(--bg-elevated)" }} />
+          <div className="h-7 w-28 rounded-md" style={bgElevated} />
+          <div className="h-9 w-24 rounded-lg" style={bgElevated} />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="rounded-xl px-5 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
-              <div className="h-3 w-16 rounded mb-3" style={{ backgroundColor: "var(--bg-elevated)" }} />
-              <div className="h-6 w-24 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+            <div key={i} className="rounded-xl px-5 py-4" style={bgCardBordered}>
+              <div className="h-3 w-16 rounded mb-3" style={bgElevated} />
+              <div className="h-6 w-24 rounded" style={bgElevated} />
             </div>
           ))}
         </div>
-        <div className="h-10 rounded-lg mb-5" style={{ backgroundColor: "var(--bg-secondary)" }} />
+        <div className="h-10 rounded-lg mb-5" style={bgSecondary} />
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-xl mb-3 px-4 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
-            <div className="h-5 w-32 rounded mb-2" style={{ backgroundColor: "var(--bg-elevated)" }} />
-            <div className="h-4 w-48 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+          <div key={i} className="rounded-xl mb-3 px-4 py-4" style={bgCardBordered}>
+            <div className="h-5 w-32 rounded mb-2" style={bgElevated} />
+            <div className="h-4 w-48 rounded" style={bgElevated} />
           </div>
         ))}
       </div>
@@ -275,7 +287,7 @@ export function HoldingsPage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>Member not found</p>
+        <p className="text-sm" style={textMuted}>Member not found</p>
       </div>
     )
   }
@@ -284,17 +296,14 @@ export function HoldingsPage() {
     <div className="animate-page-enter">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-2xl font-bold tracking-tight" style={textPrimary}>
             {data.member.name}
           </h1>
         </div>
         <button
           onClick={() => setShowBuy(true)}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
-          style={{
-            background: "var(--gradient-accent)",
-            boxShadow: "var(--shadow-accent)",
-          }}
+          style={addBuyButtonStyle}
         >
           <Plus size={15} strokeWidth={2} />
           Add Buy
@@ -305,7 +314,7 @@ export function HoldingsPage() {
 
       <div
         className="flex gap-0.5 mb-5 p-0.5 rounded-lg"
-        style={{ backgroundColor: "var(--bg-secondary)" }}
+        style={bgSecondary}
         role="tablist"
         aria-label="Holdings view"
       >
@@ -335,7 +344,7 @@ export function HoldingsPage() {
           size={14}
           strokeWidth={2}
           className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: "var(--text-muted)" }}
+          style={textMuted}
         />
         <input
           type="text"
@@ -344,10 +353,7 @@ export function HoldingsPage() {
           placeholder="Filter by ticker..."
           aria-label="Filter holdings by ticker"
           className="w-full pl-9 pr-8 py-2 rounded-lg text-[13px] bg-transparent outline-none transition-all duration-150"
-          style={{
-            border: "1px solid var(--border-color)",
-            color: "var(--text-primary)",
-          }}
+          style={searchInputStyle}
         />
         {search && (
           <button
@@ -355,7 +361,7 @@ export function HoldingsPage() {
             aria-label="Clear filter"
             className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg cursor-pointer hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors"
           >
-            <X size={14} strokeWidth={2} style={{ color: "var(--text-muted)" }} />
+            <X size={14} strokeWidth={2} style={textMuted} />
           </button>
         )}
       </div>
@@ -366,9 +372,9 @@ export function HoldingsPage() {
           {filteredHoldings.length === 0 ? (
             <div
               className="text-center py-16 rounded-xl"
-              style={{ border: "1px dashed var(--border-color)" }}
+              style={dashedBorder}
             >
-              <p className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+              <p className="text-sm mb-2" style={textMuted}>
                 {search ? "No holdings match your search" : "No active holdings"}
               </p>
               {!search && (
@@ -395,11 +401,11 @@ export function HoldingsPage() {
           <PnLSummary data={filteredPnl} />
           <div
             className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" }}
+            style={borderedCardShadow}
           >
             {filteredPnl.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              <p className="text-sm" style={textMuted}>
                 {search ? "No P/L records match your search" : "No realized P/L yet"}
               </p>
             </div>
@@ -407,7 +413,7 @@ export function HoldingsPage() {
             <div className="w-full overflow-x-auto">
               <table className="w-full text-[13px] min-w-[900px]">
                 <thead>
-                  <tr style={{ backgroundColor: "var(--bg-elevated)" }}>
+                  <tr style={bgElevated}>
                     <SortableHeader label="Ticker" field="ticker" active={pnlSort} dir={pnlSortDir} align="left" onSort={handlePnlSort} />
                     <SortableHeader label="Buy Date" field="buy_date" active={pnlSort} dir={pnlSortDir} align="left" onSort={handlePnlSort} />
                     <SortableHeader label="Buy Qty" field="buy_qty" active={pnlSort} dir={pnlSortDir} align="right" onSort={handlePnlSort} />
@@ -432,14 +438,14 @@ export function HoldingsPage() {
                           backgroundColor: isProfitAlert ? "var(--alert-row-bg)" : undefined,
                         }}
                       >
-                        <td className="px-4 py-2.5 font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{pnl.ticker}</td>
-                        <td className="px-4 py-2.5 font-mono text-[12px] tabular-nums whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{formatDate(pnl.buy_date)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatNumber(pnl.buy_qty)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>₹{formatNumber(pnl.buy_rate)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(pnl.buy_value)}</td>
-                        <td className="px-4 py-2.5 font-mono text-[12px] tabular-nums whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{formatDate(pnl.sell_date)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>₹{formatNumber(pnl.sell_rate)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(pnl.sell_value)}</td>
+                        <td className="px-4 py-2.5 font-semibold whitespace-nowrap" style={textPrimary}>{pnl.ticker}</td>
+                        <td className="px-4 py-2.5 font-mono text-[12px] tabular-nums whitespace-nowrap" style={textSecondary}>{formatDate(pnl.buy_date)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>{formatNumber(pnl.buy_qty)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>₹{formatNumber(pnl.buy_rate)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>{formatCurrency(pnl.buy_value)}</td>
+                        <td className="px-4 py-2.5 font-mono text-[12px] tabular-nums whitespace-nowrap" style={textSecondary}>{formatDate(pnl.sell_date)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>₹{formatNumber(pnl.sell_rate)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>{formatCurrency(pnl.sell_value)}</td>
                         <td
                           className="px-4 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap"
                           style={{ color: pnl.profit_loss >= 0 ? "var(--color-profit)" : "var(--color-loss)" }}

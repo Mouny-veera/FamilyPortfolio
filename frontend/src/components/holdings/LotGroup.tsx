@@ -11,6 +11,41 @@ import { DeleteConfirm } from "./DeleteConfirm"
 
 const ALERT_THRESHOLD = 10
 
+const textMuted = { color: "var(--text-muted)" } as const
+const textPrimary = { color: "var(--text-primary)" } as const
+const textSecondary = { color: "var(--text-secondary)" } as const
+const colorAccent = { color: "var(--color-accent)" } as const
+const colorProfit = { color: "var(--color-profit)" } as const
+const warningBar = {
+  backgroundColor: "var(--warning-04)",
+  borderTop: "1px solid var(--border-subtle)",
+} as const
+const suggestionButton = {
+  backgroundColor: "var(--bg-card)",
+  border: "1px solid var(--border-color)",
+  color: "var(--text-primary)",
+} as const
+const searchInput = {
+  border: "1px solid var(--border-color)",
+  color: "var(--text-primary)",
+} as const
+const dropdown = {
+  backgroundColor: "var(--bg-card)",
+  border: "1px solid var(--border-color)",
+  boxShadow: "var(--shadow-elevated)",
+} as const
+const dropdownItemBorder = { borderBottom: "1px solid var(--border-subtle)" } as const
+const groupContainer = {
+  border: "1px solid var(--border-color)",
+  boxShadow: "var(--shadow-card)",
+} as const
+const unmatchedBadge = { backgroundColor: "var(--warning-12)", color: "var(--color-amber)" } as const
+const lotCountBadge = { backgroundColor: "var(--bg-secondary)", color: "var(--text-muted)" } as const
+const scannerBadge = { backgroundColor: "var(--warning-10)", color: "var(--color-amber)" } as const
+const alertBadge = { backgroundColor: "var(--accent-12)", color: "var(--color-profit)" } as const
+const borderTopSubtle = { borderTop: "1px solid var(--border-subtle)" } as const
+const tableHeaderRow = { backgroundColor: "var(--bg-card)" } as const
+
 function RemapBar({
   suggestions,
   remapping,
@@ -52,12 +87,9 @@ function RemapBar({
   return (
     <div
       className="px-4 py-2.5 flex items-center gap-3 flex-wrap"
-      style={{
-        backgroundColor: "var(--warning-04)",
-        borderTop: "1px solid var(--border-subtle)",
-      }}
+      style={warningBar}
     >
-      <span className="text-[11px] font-medium whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+      <span className="text-[11px] font-medium whitespace-nowrap" style={textMuted}>
         Map to:
       </span>
       {suggestions.map((s) => (
@@ -66,14 +98,10 @@ function RemapBar({
           onClick={() => onRemap(s.symbol)}
           disabled={remapping}
           className="text-[11px] px-2.5 py-1 min-h-[44px] lg:min-h-0 rounded-md font-medium cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            backgroundColor: "var(--bg-card)",
-            border: "1px solid var(--border-color)",
-            color: "var(--text-primary)",
-          }}
+          style={suggestionButton}
         >
           {s.symbol}
-          <span className="ml-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
+          <span className="ml-1 text-[10px]" style={textMuted}>
             {s.company_name.length > 20 ? s.company_name.slice(0, 20) + "..." : s.company_name}
           </span>
         </button>
@@ -84,7 +112,7 @@ function RemapBar({
             size={12}
             strokeWidth={2}
             className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--text-muted)" }}
+            style={textMuted}
           />
           <input
             type="text"
@@ -95,20 +123,13 @@ function RemapBar({
             aria-label="Search NSE symbol for remapping"
             disabled={remapping}
             className="text-[11px] pl-7 pr-2 py-1.5 min-h-[44px] lg:min-h-0 rounded-md bg-transparent outline-none w-40 disabled:opacity-40"
-            style={{
-              border: "1px solid var(--border-color)",
-              color: "var(--text-primary)",
-            }}
+            style={searchInput}
           />
         </div>
         {showDrop && (
           <div
             className="absolute z-20 w-56 mt-1 rounded-lg overflow-hidden max-h-44 overflow-y-auto"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              border: "1px solid var(--border-color)",
-              boxShadow: "var(--shadow-elevated)",
-            }}
+            style={dropdown}
           >
             {results.map((r) => (
               <button
@@ -116,12 +137,12 @@ function RemapBar({
                 type="button"
                 onClick={() => { onRemap(r.symbol); setShowDrop(false); setQuery("") }}
                 className="w-full text-left px-3 py-2 min-h-[44px] lg:min-h-0 cursor-pointer transition-colors duration-75 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
-                style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                style={dropdownItemBorder}
               >
-                <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>
+                <span className="text-[12px] font-semibold" style={textPrimary}>
                   {r.symbol}
                 </span>
-                <span className="text-[10px] ml-2" style={{ color: "var(--text-muted)" }}>
+                <span className="text-[10px] ml-2" style={textMuted}>
                   {r.company_name}
                 </span>
               </button>
@@ -166,10 +187,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
   return (
     <div
       className="rounded-xl mb-3 overflow-hidden animate-fade-in"
-      style={{
-        border: "1px solid var(--border-color)",
-        boxShadow: "var(--shadow-card)",
-      }}
+      style={groupContainer}
     >
       <div
         className="flex items-center justify-between px-4 py-3 transition-colors duration-150 max-md:hidden"
@@ -187,9 +205,9 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
             size={14}
             strokeWidth={2}
             className={cn("transition-transform duration-200 shrink-0", open && "rotate-90")}
-            style={{ color: "var(--text-muted)" }}
+            style={textMuted}
           />
-          <span className="font-semibold text-[13px] tracking-tight" style={{ color: "var(--text-primary)" }}>
+          <span className="font-semibold text-[13px] tracking-tight" style={textPrimary}>
             {group.ticker}
           </span>
           <span
@@ -198,18 +216,18 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
             onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(`/stock/${group.ticker}`) } }}
             className="shrink-0 cursor-pointer transition-colors"
-            style={{ color: "var(--color-accent)" }}
+            style={colorAccent}
             aria-label={`View ${group.ticker} chart`}
           >
             <BarChart3 size={13} strokeWidth={2} />
           </span>
           {group.mapping_status === "verified" && (
-            <CheckCircle2 size={12} strokeWidth={2.5} style={{ color: "var(--color-profit)" }} className="shrink-0" />
+            <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
           )}
           {isUnmatched && (
             <span
               className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
-              style={{ backgroundColor: "var(--warning-12)", color: "var(--color-amber)" }}
+              style={unmatchedBadge}
             >
               <AlertTriangle size={10} strokeWidth={2.5} />
               Unmatched
@@ -217,14 +235,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           )}
           <span
             className="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
-            style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-muted)" }}
+            style={lotCountBadge}
           >
             {group.lot_count} lot{group.lot_count !== 1 ? "s" : ""}
           </span>
           {group.scanner_badge && (
             <span
               className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold"
-              style={{ backgroundColor: "var(--warning-10)", color: "var(--color-amber)" }}
+              style={scannerBadge}
             >
               {group.scanner_badge}
             </span>
@@ -232,7 +250,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           {isAlert && (
             <span
               className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold animate-pulse-subtle"
-              style={{ backgroundColor: "var(--accent-12)", color: "var(--color-profit)" }}
+              style={alertBadge}
             >
               <TrendingUp size={10} strokeWidth={2.5} />
               ≥10% Profit
@@ -241,27 +259,27 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
         </button>
         <div className="flex items-center gap-6 text-right shrink-0">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</p>
-            <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Qty</p>
+            <p className="text-[13px] font-mono font-medium tabular-nums" style={textPrimary}>
               {formatNumber(group.total_qty)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Invested</p>
-            <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Invested</p>
+            <p className="text-[13px] font-mono font-medium tabular-nums" style={textPrimary}>
               {formatCurrency(group.total_invested)}
             </p>
           </div>
           {group.current_value != null && (
             <>
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current</p>
-                <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Current</p>
+                <p className="text-[13px] font-mono font-medium tabular-nums" style={textPrimary}>
                   {formatCurrency(group.current_value)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Profit %</p>
+                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Profit %</p>
                 <p
                   className={cn(
                     "text-[13px] font-mono font-semibold tabular-nums",
@@ -276,7 +294,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</p>
+                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>P/L</p>
                 <p
                   className="text-[13px] font-mono font-semibold tabular-nums"
                   style={{
@@ -327,9 +345,9 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
               size={14}
               strokeWidth={2}
               className={cn("transition-transform duration-200 shrink-0", open && "rotate-90")}
-              style={{ color: "var(--text-muted)" }}
+              style={textMuted}
             />
-            <span className="font-semibold text-sm tracking-tight truncate" style={{ color: "var(--text-primary)" }}>
+            <span className="font-semibold text-sm tracking-tight truncate" style={textPrimary}>
               {group.ticker}
             </span>
             <span
@@ -338,18 +356,18 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
               onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
               onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(`/stock/${group.ticker}`) } }}
               className="shrink-0 cursor-pointer transition-colors"
-              style={{ color: "var(--color-accent)" }}
+              style={colorAccent}
               aria-label={`View ${group.ticker} chart`}
             >
               <BarChart3 size={13} strokeWidth={2} />
             </span>
             {group.mapping_status === "verified" && (
-              <CheckCircle2 size={12} strokeWidth={2.5} style={{ color: "var(--color-profit)" }} className="shrink-0" />
+              <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
             )}
             {isUnmatched && (
               <span
                 className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
-                style={{ backgroundColor: "var(--warning-12)", color: "var(--color-amber)" }}
+                style={unmatchedBadge}
               >
                 <AlertTriangle size={10} strokeWidth={2.5} />
                 Unmatched
@@ -377,27 +395,27 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
 
         <div className="flex items-center gap-4 mt-2 ml-6 overflow-x-auto text-right">
           <div className="shrink-0">
-            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</p>
-            <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Qty</p>
+            <p className="text-[13px] font-mono font-medium tabular-nums" style={textPrimary}>
               {formatNumber(group.total_qty)}
             </p>
           </div>
           <div className="shrink-0">
-            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Invested</p>
-            <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+            <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Invested</p>
+            <p className="text-[13px] font-mono font-medium tabular-nums" style={textPrimary}>
               {formatCurrency(group.total_invested)}
             </p>
           </div>
           {group.current_value != null && (
             <>
               <div className="shrink-0">
-                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Current</p>
-                <p className="text-[13px] font-mono font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Current</p>
+                <p className="text-[13px] font-mono font-medium tabular-nums" style={textPrimary}>
                   {formatCurrency(group.current_value)}
                 </p>
               </div>
               <div className="shrink-0">
-                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L %</p>
+                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>P/L %</p>
                 <p
                   className={cn(
                     "text-[13px] font-mono font-semibold tabular-nums",
@@ -412,7 +430,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                 </p>
               </div>
               <div className="shrink-0">
-                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={{ color: "var(--text-muted)" }}>P/L</p>
+                <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>P/L</p>
                 <p
                   className="text-[13px] font-mono font-semibold tabular-nums"
                   style={{
@@ -434,7 +452,7 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
       />}
 
       {sellingGroup && (
-        <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        <div style={borderTopSubtle}>
           <SellGroupForm
             memberId={memberId}
             ticker={group.ticker}
@@ -448,17 +466,17 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
       )}
 
       {open && (
-        <div id={`lotgroup-${group.ticker}`} style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        <div id={`lotgroup-${group.ticker}`} style={borderTopSubtle}>
           <div className="w-full overflow-x-auto">
             <table className="w-full text-[13px] min-w-[520px]">
               <thead>
-                <tr style={{ backgroundColor: "var(--bg-card)" }}>
-                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>S.No</th>
-                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Buy Date</th>
-                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Qty</th>
-                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Rate</th>
-                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Value</th>
-                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--text-muted)" }}>Action</th>
+                <tr style={tableHeaderRow}>
+                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={textMuted}>S.No</th>
+                  <th scope="col" className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={textMuted}>Buy Date</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={textMuted}>Qty</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={textMuted}>Rate</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={textMuted}>Value</th>
+                  <th scope="col" className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap" style={textMuted}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -470,11 +488,11 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                         borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined,
                       }}
                     >
-                      <td className="px-4 py-2.5 font-mono text-[11px] font-medium whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
-                      <td className="px-4 py-2.5 font-mono text-[12px] tabular-nums whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{formatDate(lot.buy_date)}</td>
-                      <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatNumber(lot.buy_qty)}</td>
-                      <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>₹{formatNumber(lot.buy_rate)}</td>
-                      <td className="px-4 py-2.5 text-right font-mono font-medium tabular-nums whitespace-nowrap" style={{ color: "var(--text-primary)" }}>{formatCurrency(lot.buy_value)}</td>
+                      <td className="px-4 py-2.5 font-mono text-[11px] font-medium whitespace-nowrap" style={textMuted}>{i + 1}</td>
+                      <td className="px-4 py-2.5 font-mono text-[12px] tabular-nums whitespace-nowrap" style={textSecondary}>{formatDate(lot.buy_date)}</td>
+                      <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>{formatNumber(lot.buy_qty)}</td>
+                      <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={textPrimary}>₹{formatNumber(lot.buy_rate)}</td>
+                      <td className="px-4 py-2.5 text-right font-mono font-medium tabular-nums whitespace-nowrap" style={textPrimary}>{formatCurrency(lot.buy_value)}</td>
                       <td className="px-4 py-2.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
                           <button

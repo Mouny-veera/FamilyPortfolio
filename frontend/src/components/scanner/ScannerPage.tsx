@@ -23,6 +23,36 @@ import { api, type ScanResult } from "@/lib/api"
 import { formatNumber } from "@/lib/utils"
 import { PageError } from "@/components/ui/PageError"
 
+/* ────────────────────────────────────────────────────────────────
+   Static style constants (hoisted to avoid re-creating objects
+   on every render — only for style objects with no dynamic values)
+   ──────────────────────────────────────────────────────────────── */
+
+const textPrimary = { color: "var(--text-primary)" } as const
+const textMuted = { color: "var(--text-muted)" } as const
+const accentText = { color: "var(--color-accent)" } as const
+const checkIconColor = { color: "var(--bg-card)" } as const
+const dragHandle = { color: "var(--text-muted)", opacity: 0.4 } as const
+const mutedIconFaded = { color: "var(--text-muted)", opacity: 0.5 } as const
+const accentButton = { background: "var(--gradient-accent)", boxShadow: "var(--shadow-accent)" } as const
+const cardPanel = { border: "1px solid var(--border-color)", backgroundColor: "var(--bg-card)", boxShadow: "var(--shadow-card)" } as const
+const dashedCardPanel = { border: "1px dashed var(--border-color)", backgroundColor: "var(--bg-card)" } as const
+const spinnerBorder = { borderColor: "var(--accent-15)", borderTopColor: "var(--color-profit)" } as const
+const noScrollbar = { scrollbarWidth: "none" } as const
+const tabsRail = { backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" } as const
+const tablePanel = { border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" } as const
+const bgCard = { backgroundColor: "var(--bg-card)" } as const
+const bgSecondary = { backgroundColor: "var(--bg-secondary)" } as const
+const dropdownPanel = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-elevated)" } as const
+const borderBottomSubtle = { borderBottom: "1px solid var(--border-subtle)" } as const
+const accentTextTransparentBg = { color: "var(--color-accent)", backgroundColor: "transparent" } as const
+const mutedTextTransparentBg = { color: "var(--text-muted)", backgroundColor: "transparent" } as const
+const accentBadgeStrong = { backgroundColor: "var(--accent-20)", color: "var(--color-accent)" } as const
+const accentProfitBadge = { backgroundColor: "var(--accent-10)", color: "var(--color-profit)" } as const
+const secondaryMutedBadge = { backgroundColor: "var(--bg-secondary)", color: "var(--text-muted)" } as const
+const lossBadge = { backgroundColor: "var(--loss-10)", color: "var(--color-loss)" } as const
+const warningBadge = { backgroundColor: "var(--warning-10)", color: "var(--color-warning)" } as const
+
 function num(v: unknown): number | null {
   return typeof v === "number" && !Number.isNaN(v) ? v : null
 }
@@ -308,7 +338,7 @@ function ColumnToggle({
         {!allVisible && (
           <span
             className="text-[10px] font-semibold px-1 py-0 rounded"
-            style={{ backgroundColor: "var(--accent-20)", color: "var(--color-accent)" }}
+            style={accentBadgeStrong}
           >
             {visibleCount}/{totalCols}
           </span>
@@ -317,28 +347,24 @@ function ColumnToggle({
       {open && (
         <div
           className="absolute right-0 top-full mt-1.5 z-50 rounded-xl py-1.5 min-w-[200px] animate-fade-in"
-          style={{
-            backgroundColor: "var(--bg-card)",
-            border: "1px solid var(--border-color)",
-            boxShadow: "var(--shadow-elevated)",
-          }}
+          style={dropdownPanel}
         >
-          <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+          <div className="px-3 py-2 flex items-center justify-between" style={borderBottomSubtle}>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={textMuted}>
               Toggle Columns
             </span>
             <div className="flex gap-1">
               <button
                 onClick={onShowAll}
                 className="text-[10px] font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors"
-                style={{ color: "var(--color-accent)", backgroundColor: "transparent" }}
+                style={accentTextTransparentBg}
               >
                 All
               </button>
               <button
                 onClick={onReset}
                 className="flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors"
-                style={{ color: "var(--text-muted)", backgroundColor: "transparent" }}
+                style={mutedTextTransparentBg}
               >
                 <RotateCcw size={9} strokeWidth={2} />
                 Reset
@@ -353,7 +379,7 @@ function ColumnToggle({
                 key={col.id}
                 onClick={() => !isLocked && onToggle(col.id)}
                 disabled={isLocked}
-                className="flex items-center gap-2.5 w-full px-3 py-1.5 text-left text-[12px] cursor-pointer transition-colors duration-100 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] disabled:opacity-40 disabled:cursor-default"
+                className="flex items-center gap-2.5 w-full px-3 py-1.5 min-h-[44px] text-left text-[12px] cursor-pointer transition-colors duration-100 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] disabled:opacity-40 disabled:cursor-default"
                 style={{ color: isVisible ? "var(--text-primary)" : "var(--text-muted)" }}
               >
                 <span
@@ -363,7 +389,7 @@ function ColumnToggle({
                     border: isVisible ? "none" : "1.5px solid var(--border-color)",
                   }}
                 >
-                  {isVisible && <Check size={10} strokeWidth={3} color="white" />}
+                  {isVisible && <Check size={10} strokeWidth={3} style={checkIconColor} />}
                 </span>
                 {col.label}
               </button>
@@ -488,7 +514,7 @@ function SortableTab({ id, label, count, isActive, onClick }: {
           {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing touch-none flex items-center"
-          style={{ color: "var(--text-muted)", opacity: 0.4 }}
+          style={dragHandle}
           onClick={(e) => e.stopPropagation()}
         >
           <GripVertical size={12} strokeWidth={2} />
@@ -599,10 +625,10 @@ export function ScannerPage() {
     <div className="animate-page-enter">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-xl font-semibold tracking-tight" style={textPrimary}>
             Scanner
           </h1>
-          <p className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[12px] mt-0.5" style={textMuted}>
             Technical analysis on Nifty 500 — 11 strategies, composite scoring
             {lastScan && (
               <span className="ml-2">
@@ -615,10 +641,7 @@ export function ScannerPage() {
           onClick={handleScan}
           disabled={scanning}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: "var(--gradient-accent)",
-            boxShadow: "var(--shadow-accent)",
-          }}
+          style={accentButton}
         >
           {scanning ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} strokeWidth={2} />}
           {scanning ? "Scanning..." : "Run Scanner"}
@@ -628,13 +651,13 @@ export function ScannerPage() {
       {scanning && (
         <div
           className="text-center py-12 rounded-xl mb-4"
-          style={{ border: "1px solid var(--border-color)", backgroundColor: "var(--bg-card)", boxShadow: "var(--shadow-card)" }}
+          style={cardPanel}
         >
-          <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3" style={{ borderColor: "var(--accent-15)", borderTopColor: "var(--color-profit)" }} />
-          <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
+          <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3" style={spinnerBorder} />
+          <p className="text-[13px] font-medium" style={textPrimary}>
             Scanning Nifty 500 across 11 strategies...
           </p>
-          <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[11px] mt-1" style={textMuted}>
             This may take a few minutes due to rate limits.
           </p>
         </div>
@@ -643,18 +666,15 @@ export function ScannerPage() {
       {!loading && results.length === 0 && !scanning && (
         <div
           className="text-center py-16 rounded-xl"
-          style={{ border: "1px dashed var(--border-color)", backgroundColor: "var(--bg-card)" }}
+          style={dashedCardPanel}
         >
-          <Search size={28} strokeWidth={1.5} className="mx-auto mb-3" style={{ color: "var(--text-muted)", opacity: 0.5 }} />
-          <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>No scan results yet</p>
-          <p className="text-[12px] mt-1 mb-4" style={{ color: "var(--text-muted)" }}>Run the scanner to find top picks across 11 strategies.</p>
+          <Search size={28} strokeWidth={1.5} className="mx-auto mb-3" style={mutedIconFaded} />
+          <p className="text-[13px] font-medium" style={textPrimary}>No scan results yet</p>
+          <p className="text-[12px] mt-1 mb-4" style={textMuted}>Run the scanner to find top picks across 11 strategies.</p>
           <button
             onClick={handleScan}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
-            style={{
-              background: "var(--gradient-accent)",
-              boxShadow: "var(--shadow-accent)",
-            }}
+            style={accentButton}
           >
             <Play size={15} strokeWidth={2} />
             Run Scanner
@@ -665,14 +685,14 @@ export function ScannerPage() {
       {results.length > 0 && (
         <>
           {/* Strategy Tabs — drag to reorder */}
-          <div className="mb-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+          <div className="mb-4 overflow-x-auto" style={noScrollbar}>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
                 <div
                   className="flex gap-1 p-1 rounded-lg w-max min-w-full"
                   role="tablist"
                   aria-label="Scanner strategies"
-                  style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
+                  style={tabsRail}
                 >
                   {tabOrder.map((key) => (
                     <SortableTab
@@ -691,7 +711,7 @@ export function ScannerPage() {
 
           {/* Result count + column toggle */}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+            <span className="text-[11px]" style={textMuted}>
               {filtered.length} results
             </span>
             <ColumnToggle
@@ -706,11 +726,11 @@ export function ScannerPage() {
           {/* Results Table */}
           <div
             className="rounded-xl overflow-hidden"
-            style={{ border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" }}
+            style={tablePanel}
           >
             {filtered.length === 0 ? (
-              <div className="text-center py-10" style={{ backgroundColor: "var(--bg-card)" }}>
-                <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+              <div className="text-center py-10" style={bgCard}>
+                <p className="text-[12px]" style={textMuted}>
                   No results for this indicator. Run the scanner to generate data.
                 </p>
               </div>
@@ -747,7 +767,7 @@ function TH({ children, align = "left" }: { children: React.ReactNode; align?: "
     <th
       scope="col"
       className={`text-${align} px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap`}
-      style={{ color: "var(--text-muted)" }}
+      style={textMuted}
     >
       {children}
     </th>
@@ -772,7 +792,7 @@ function TickerCell({ ticker }: { ticker: string }) {
       <button
         onClick={() => navigate(`/stock/${ticker}`)}
         className="font-semibold cursor-pointer transition-colors bg-transparent border-none p-0"
-        style={{ color: "var(--color-accent)" }}
+        style={accentText}
       >
         {ticker}
       </button>
@@ -835,10 +855,10 @@ function CategoryBar({ score, label }: { score: number; label: string }) {
   const color = n >= 60 ? "var(--color-profit)" : n <= 40 ? "var(--color-loss)" : "var(--text-muted)"
   return (
     <div className="flex items-center gap-2 min-w-[120px]">
-      <span className="text-[10px] font-medium w-16 text-right" style={{ color: "var(--text-muted)" }}>
+      <span className="text-[10px] font-medium w-16 text-right" style={textMuted}>
         {label}
       </span>
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={bgSecondary}>
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${Math.max(2, n)}%`, backgroundColor: color }}
@@ -860,7 +880,7 @@ function CompositeTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -907,7 +927,7 @@ function SuperTrendTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -966,7 +986,7 @@ function ADXTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1015,7 +1035,7 @@ function ADXTable({ results, fundamentals, vis }: TableProps) {
               {vis.has("adx") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: trending ? "var(--color-profit)" : "var(--text-muted)" }}>{fmt(m.adx, 1)}</td>}
               {vis.has("plus_di") && <TD mono align="right" color="var(--color-profit)">{fmt(m.plus_di, 1)}</TD>}
               {vis.has("minus_di") && <TD mono align="right" color="var(--color-loss)">{fmt(m.minus_di, 1)}</TD>}
-              {vis.has("trend") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{trending ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}>TRENDING</span>) : (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-muted)" }}>RANGING</span>)}</td>}
+              {vis.has("trend") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{trending ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={accentProfitBadge}>TRENDING</span>) : (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={secondaryMutedBadge}>RANGING</span>)}</td>}
               {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
@@ -1033,7 +1053,7 @@ function StochasticTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1082,7 +1102,7 @@ function StochasticTable({ results, fundamentals, vis }: TableProps) {
               {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
               {vis.has("pct_k") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: kColor }}>{fmt(m.pct_k, 1)}</td>}
               {vis.has("pct_d") && <TD mono align="right">{fmt(m.pct_d, 1)}</TD>}
-              {vis.has("zone") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.oversold ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}>OVERSOLD</span>) : m.overbought ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--loss-10)", color: "var(--color-loss)" }}>OVERBOUGHT</span>) : (<span className="text-[10px]" style={{ color: "var(--text-muted)" }}>—</span>)}</td>}
+              {vis.has("zone") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.oversold ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={accentProfitBadge}>OVERSOLD</span>) : m.overbought ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={lossBadge}>OVERBOUGHT</span>) : (<span className="text-[10px]" style={textMuted}>—</span>)}</td>}
               {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
@@ -1100,7 +1120,7 @@ function BollingerTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1152,7 +1172,7 @@ function BollingerTable({ results, fundamentals, vis }: TableProps) {
               {vis.has("sma") && <TD mono align="right">{fmtPrice(m.sma)}</TD>}
               {vis.has("lower") && <TD mono align="right">{fmtPrice(m.lower)}</TD>}
               {vis.has("pct_b") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: pctB !== null && pctB < 0.2 ? "var(--color-profit)" : pctB !== null && pctB > 0.8 ? "var(--color-loss)" : "var(--text-primary)" }}>{fmt(m.pct_b, 3)}</td>}
-              {vis.has("squeeze") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.squeeze ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--warning-10)", color: "var(--color-warning)" }}>SQUEEZE</span>) : (<span className="text-[10px]" style={{ color: "var(--text-muted)" }}>—</span>)}</td>}
+              {vis.has("squeeze") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.squeeze ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={warningBadge}>SQUEEZE</span>) : (<span className="text-[10px]" style={textMuted}>—</span>)}</td>}
               {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
@@ -1170,7 +1190,7 @@ function High52WTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1222,7 +1242,7 @@ function High52WTable({ results, fundamentals, vis }: TableProps) {
               {vis.has("high_52w") && <TD mono align="right">{fmtPrice(m.high_52w)}</TD>}
               {vis.has("low_52w") && <TD mono align="right">{fmtPrice(m.low_52w)}</TD>}
               {vis.has("from_high") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: pctFromHigh !== null && pctFromHigh >= -5 ? "var(--color-profit)" : pctFromHigh !== null && pctFromHigh <= -20 ? "var(--color-loss)" : "var(--text-primary)" }}>{fmtPct(m.pct_from_high, 1, true)}</td>}
-              {vis.has("range") && <td className="px-5 py-2.5 text-right whitespace-nowrap"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}><div className="h-full rounded-full" style={{ width: `${Math.max(2, rangePosVal * 100)}%`, backgroundColor: rangePosVal > 0.7 ? "var(--color-profit)" : rangePosVal < 0.3 ? "var(--color-loss)" : "var(--text-muted)" }} /></div><span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>{fmt(rangePos !== null ? rangePos * 100 : null, 0)}%</span></div></td>}
+              {vis.has("range") && <td className="px-5 py-2.5 text-right whitespace-nowrap"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 rounded-full overflow-hidden" style={bgSecondary}><div className="h-full rounded-full" style={{ width: `${Math.max(2, rangePosVal * 100)}%`, backgroundColor: rangePosVal > 0.7 ? "var(--color-profit)" : rangePosVal < 0.3 ? "var(--color-loss)" : "var(--text-muted)" }} /></div><span className="text-[11px] font-mono tabular-nums" style={textMuted}>{fmt(rangePos !== null ? rangePos * 100 : null, 0)}%</span></div></td>}
               {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
@@ -1240,7 +1260,7 @@ function Low52WTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1293,7 +1313,7 @@ function Low52WTable({ results, fundamentals, vis }: TableProps) {
               {vis.has("low_52w") && <TD mono align="right">{fmtPrice(m.low_52w)}</TD>}
               {vis.has("high_52w") && <TD mono align="right">{fmtPrice(m.high_52w)}</TD>}
               {vis.has("from_low") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: pctFromLow !== null && pctFromLow <= 5 ? "var(--color-loss)" : pctFromLow !== null && pctFromLow >= 20 ? "var(--color-profit)" : "var(--text-primary)" }}>{fmtPct(m.pct_from_low, 1, true)}</td>}
-              {vis.has("range") && <td className="px-5 py-2.5 text-right whitespace-nowrap"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}><div className="h-full rounded-full" style={{ width: `${Math.max(2, rangePosVal * 100)}%`, backgroundColor: rangePosVal < 0.3 ? "var(--color-loss)" : rangePosVal > 0.7 ? "var(--color-profit)" : "var(--text-muted)" }} /></div><span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>{fmt(rangePos !== null ? rangePos * 100 : null, 0)}%</span></div></td>}
+              {vis.has("range") && <td className="px-5 py-2.5 text-right whitespace-nowrap"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 rounded-full overflow-hidden" style={bgSecondary}><div className="h-full rounded-full" style={{ width: `${Math.max(2, rangePosVal * 100)}%`, backgroundColor: rangePosVal < 0.3 ? "var(--color-loss)" : rangePosVal > 0.7 ? "var(--color-profit)" : "var(--text-muted)" }} /></div><span className="text-[11px] font-mono tabular-nums" style={textMuted}>{fmt(rangePos !== null ? rangePos * 100 : null, 0)}%</span></div></td>}
               {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
@@ -1311,7 +1331,7 @@ function FibTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1342,7 +1362,7 @@ function FibTable({ results, fundamentals, vis }: TableProps) {
               {vis.has("high") && <TD mono align="right">{fmtPrice(m.high_6m)}</TD>}
               {vis.has("low") && <TD mono align="right">{fmtPrice(m.low_6m)}</TD>}
               {vis.has("fib_618") && <TD mono align="right">{fmtPrice(m.fib_618)}</TD>}
-              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.near_618 ? (<SignalBadge signal="Near 0.618" variant="warning" />) : (<span style={{ color: "var(--text-muted)" }}>—</span>)}</td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.near_618 ? (<SignalBadge signal="Near 0.618" variant="warning" />) : (<span style={textMuted}>—</span>)}</td>}
             </tr>
           )
         })}
@@ -1355,7 +1375,7 @@ function PivotTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1418,7 +1438,7 @@ function MACDTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
@@ -1481,7 +1501,7 @@ function RSITable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
       <thead>
-        <tr style={{ backgroundColor: "var(--bg-card)" }}>
+        <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
           {vis.has("pe") && <TH align="right">P/E</TH>}
