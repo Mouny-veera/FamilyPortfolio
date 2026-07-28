@@ -39,8 +39,28 @@ def backup_database(max_backups: int = 10):
         backups.pop(0).unlink()
 
 
+async def _migrate_add_columns(conn):
+    migrations = [
+        ("stock_fundamentals", "industry", "VARCHAR(100)"),
+        ("stock_fundamentals", "pb_ratio", "FLOAT"),
+        ("stock_fundamentals", "roe", "FLOAT"),
+        ("stock_fundamentals", "npm", "FLOAT"),
+        ("stock_fundamentals", "face_value", "FLOAT"),
+        ("stock_fundamentals", "isin", "VARCHAR(20)"),
+        ("stock_fundamentals", "data_source", "VARCHAR(20)"),
+        ("stock_fundamentals", "bse_scrip_code", "VARCHAR(20)"),
+    ]
+    for table, column, col_type in migrations:
+        try:
+            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+            print(f"[Migration] Added {table}.{column}")
+        except Exception:
+            pass
+
+
 async def init_db():
     backup_database()
     async with engine.begin() as conn:
         await conn.execute(text("PRAGMA journal_mode=WAL"))
         await conn.run_sync(Base.metadata.create_all)
+        await _migrate_add_columns(conn)
