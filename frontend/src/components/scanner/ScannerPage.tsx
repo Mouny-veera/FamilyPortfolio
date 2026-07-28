@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Play, Loader2, Search, TrendingUp, TrendingDown, Minus, GripVertical } from "lucide-react"
+import { Play, Loader2, Search, TrendingUp, TrendingDown, Minus, GripVertical, SlidersHorizontal, Check, RotateCcw } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -46,6 +46,333 @@ function fmtPct(v: unknown, decimals = 1, showSign = false): string {
 
 function safeStr(v: unknown): string {
   return typeof v === "string" ? v : ""
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Column visibility system
+   ──────────────────────────────────────────────────────────────── */
+
+type ColDef = { id: string; label: string; defaultVisible?: boolean }
+
+const STRATEGY_COLUMNS: Record<StrategyKey, ColDef[]> = {
+  composite: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "rating", label: "Rating" },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "breakdown", label: "Breakdown" },
+    { id: "strategies", label: "Strategies" },
+  ],
+  supertrend: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "st_level", label: "ST Level" },
+    { id: "direction", label: "Direction" },
+    { id: "streak", label: "Streak" },
+    { id: "signal", label: "Signal" },
+  ],
+  adx: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "adx", label: "ADX" },
+    { id: "plus_di", label: "+DI" },
+    { id: "minus_di", label: "-DI" },
+    { id: "trend", label: "Trend" },
+    { id: "signal", label: "Signal" },
+  ],
+  rsi: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "rsi", label: "RSI" },
+    { id: "trend", label: "Trend" },
+    { id: "signal", label: "Signal" },
+  ],
+  macd: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "macd", label: "MACD" },
+    { id: "signal_line", label: "Signal" },
+    { id: "histogram", label: "Histogram" },
+    { id: "trend", label: "Trend" },
+  ],
+  stochastic: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "pct_k", label: "%K" },
+    { id: "pct_d", label: "%D" },
+    { id: "zone", label: "Zone" },
+    { id: "signal", label: "Signal" },
+  ],
+  fibonacci_retracement: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "high", label: "52W High" },
+    { id: "low", label: "52W Low" },
+    { id: "fib_618", label: "Fib 0.618" },
+    { id: "signal", label: "Signal" },
+  ],
+  bollinger: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "upper", label: "Upper" },
+    { id: "sma", label: "SMA(20)" },
+    { id: "lower", label: "Lower" },
+    { id: "pct_b", label: "%B" },
+    { id: "squeeze", label: "Squeeze" },
+    { id: "signal", label: "Signal" },
+  ],
+  "52w_high": [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "high_52w", label: "52W High" },
+    { id: "low_52w", label: "52W Low" },
+    { id: "from_high", label: "From High" },
+    { id: "range", label: "Range %" },
+    { id: "signal", label: "Signal" },
+  ],
+  "52w_low": [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "low_52w", label: "52W Low" },
+    { id: "high_52w", label: "52W High" },
+    { id: "from_low", label: "From Low" },
+    { id: "range", label: "Range %" },
+    { id: "signal", label: "Signal" },
+  ],
+  pivot_point: [
+    { id: "rank", label: "#" },
+    { id: "ticker", label: "Ticker" },
+    { id: "pe", label: "P/E", defaultVisible: false },
+    { id: "peg", label: "PEG", defaultVisible: false },
+    { id: "score", label: "Score" },
+    { id: "current", label: "Current" },
+    { id: "pivot", label: "Pivot" },
+    { id: "s1", label: "S1" },
+    { id: "s2", label: "S2" },
+    { id: "r1", label: "R1" },
+    { id: "r2", label: "R2" },
+    { id: "signal", label: "Signal" },
+  ],
+}
+
+const COL_VIS_KEY = "fp-scanner-col-vis"
+
+function loadColumnVisibility(strategy: StrategyKey): Set<string> {
+  try {
+    const saved = localStorage.getItem(COL_VIS_KEY)
+    if (saved) {
+      const all = JSON.parse(saved) as Record<string, string[]>
+      if (all[strategy]) return new Set(all[strategy])
+    }
+  } catch { /* ignore */ }
+  const cols = STRATEGY_COLUMNS[strategy]
+  return new Set(cols.filter(c => c.defaultVisible !== false).map(c => c.id))
+}
+
+function saveColumnVisibility(strategy: StrategyKey, visible: Set<string>) {
+  try {
+    const saved = localStorage.getItem(COL_VIS_KEY)
+    const all = saved ? JSON.parse(saved) as Record<string, string[]> : {}
+    all[strategy] = [...visible]
+    localStorage.setItem(COL_VIS_KEY, JSON.stringify(all))
+  } catch { /* ignore */ }
+}
+
+function useColumnVisibility(strategy: StrategyKey) {
+  const [visible, setVisible] = useState<Set<string>>(() => loadColumnVisibility(strategy))
+
+  useEffect(() => {
+    setVisible(loadColumnVisibility(strategy))
+  }, [strategy])
+
+  const toggle = useCallback((colId: string) => {
+    setVisible(prev => {
+      const next = new Set(prev)
+      if (next.has(colId)) {
+        if (next.size > 2) next.delete(colId)
+      } else {
+        next.add(colId)
+      }
+      saveColumnVisibility(strategy, next)
+      return next
+    })
+  }, [strategy])
+
+  const reset = useCallback(() => {
+    const cols = STRATEGY_COLUMNS[strategy]
+    const defaults = new Set(cols.filter(c => c.defaultVisible !== false).map(c => c.id))
+    setVisible(defaults)
+    saveColumnVisibility(strategy, defaults)
+  }, [strategy])
+
+  const showAll = useCallback(() => {
+    const cols = STRATEGY_COLUMNS[strategy]
+    const all = new Set(cols.map(c => c.id))
+    setVisible(all)
+    saveColumnVisibility(strategy, all)
+  }, [strategy])
+
+  return { visible, toggle, reset, showAll }
+}
+
+function ColumnToggle({
+  strategy,
+  visible,
+  onToggle,
+  onReset,
+  onShowAll,
+}: {
+  strategy: StrategyKey
+  visible: Set<string>
+  onToggle: (id: string) => void
+  onReset: () => void
+  onShowAll: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const cols = STRATEGY_COLUMNS[strategy]
+  const totalCols = cols.length
+  const visibleCount = cols.filter(c => visible.has(c.id)).length
+  const allVisible = visibleCount === totalCols
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    document.addEventListener("keydown", handleKey)
+    return () => {
+      document.removeEventListener("mousedown", handleClick)
+      document.removeEventListener("keydown", handleKey)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium cursor-pointer transition-all duration-150"
+        style={{
+          backgroundColor: !allVisible ? "var(--accent-15)" : "var(--bg-secondary)",
+          color: !allVisible ? "var(--color-accent)" : "var(--text-muted)",
+          border: !allVisible ? "1px solid var(--accent-20)" : "1px solid var(--border-color)",
+        }}
+      >
+        <SlidersHorizontal size={13} strokeWidth={2} />
+        Columns
+        {!allVisible && (
+          <span
+            className="text-[10px] font-semibold px-1 py-0 rounded"
+            style={{ backgroundColor: "var(--accent-20)", color: "var(--color-accent)" }}
+          >
+            {visibleCount}/{totalCols}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1.5 z-50 rounded-xl py-1.5 min-w-[200px] animate-fade-in"
+          style={{
+            backgroundColor: "var(--bg-card)",
+            border: "1px solid var(--border-color)",
+            boxShadow: "var(--shadow-elevated)",
+          }}
+        >
+          <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              Toggle Columns
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={onShowAll}
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                style={{ color: "var(--color-accent)", backgroundColor: "transparent" }}
+              >
+                All
+              </button>
+              <button
+                onClick={onReset}
+                className="flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                style={{ color: "var(--text-muted)", backgroundColor: "transparent" }}
+              >
+                <RotateCcw size={9} strokeWidth={2} />
+                Reset
+              </button>
+            </div>
+          </div>
+          {cols.map(col => {
+            const isVisible = visible.has(col.id)
+            const isLocked = col.id === "ticker"
+            return (
+              <button
+                key={col.id}
+                onClick={() => !isLocked && onToggle(col.id)}
+                disabled={isLocked}
+                className="flex items-center gap-2.5 w-full px-3 py-1.5 text-left text-[12px] cursor-pointer transition-colors duration-100 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] disabled:opacity-40 disabled:cursor-default"
+                style={{ color: isVisible ? "var(--text-primary)" : "var(--text-muted)" }}
+              >
+                <span
+                  className="flex items-center justify-center w-4 h-4 rounded shrink-0"
+                  style={{
+                    backgroundColor: isVisible ? "var(--color-accent)" : "transparent",
+                    border: isVisible ? "none" : "1.5px solid var(--border-color)",
+                  }}
+                >
+                  {isVisible && <Check size={10} strokeWidth={3} color="white" />}
+                </span>
+                {col.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 type FundamentalsMap = Record<string, { pe_ratio: number | null; peg_ratio: number | null }>
@@ -192,6 +519,7 @@ export function ScannerPage() {
   const [activeTab, setActiveTab] = useState<StrategyKey>("fibonacci_retracement")
   const [tabOrder, setTabOrder] = useState<StrategyKey[]>(loadTabOrder)
   const [fundamentals, setFundamentals] = useState<FundamentalsMap>({})
+  const { visible: visibleCols, toggle: toggleCol, reset: resetCols, showAll: showAllCols } = useColumnVisibility(activeTab)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -361,11 +689,18 @@ export function ScannerPage() {
             </DndContext>
           </div>
 
-          {/* Result count */}
-          <div className="flex items-center gap-2 mb-3">
+          {/* Result count + column toggle */}
+          <div className="flex items-center justify-between mb-3">
             <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
               {filtered.length} results
             </span>
+            <ColumnToggle
+              strategy={activeTab}
+              visible={visibleCols}
+              onToggle={toggleCol}
+              onReset={resetCols}
+              onShowAll={showAllCols}
+            />
           </div>
 
           {/* Results Table */}
@@ -381,17 +716,17 @@ export function ScannerPage() {
               </div>
             ) : (
               <div className="w-full overflow-x-auto" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
-                {activeTab === "composite" && <CompositeTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "supertrend" && <SuperTrendTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "adx" && <ADXTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "rsi" && <RSITable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "macd" && <MACDTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "stochastic" && <StochasticTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "fibonacci_retracement" && <FibTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "bollinger" && <BollingerTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "52w_high" && <High52WTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "52w_low" && <Low52WTable results={filtered} fundamentals={fundamentals} />}
-                {activeTab === "pivot_point" && <PivotTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "composite" && <CompositeTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "supertrend" && <SuperTrendTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "adx" && <ADXTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "rsi" && <RSITable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "macd" && <MACDTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "stochastic" && <StochasticTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "fibonacci_retracement" && <FibTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "bollinger" && <BollingerTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "52w_high" && <High52WTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "52w_low" && <Low52WTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
+                {activeTab === "pivot_point" && <PivotTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
               </div>
             )}
           </div>
@@ -404,6 +739,8 @@ export function ScannerPage() {
 /* ────────────────────────────────────────────────────────────────
    Shared table primitives
    ──────────────────────────────────────────────────────────────── */
+
+type TableProps = { results: ScanResult[]; fundamentals: FundamentalsMap; vis: Set<string> }
 
 function TH({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" | "center" }) {
   return (
@@ -518,21 +855,21 @@ function CategoryBar({ score, label }: { score: number; label: string }) {
    Composite Table
    ──────────────────────────────────────────────────────────────── */
 
-function CompositeTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function CompositeTable({ results, fundamentals, vis }: TableProps) {
   const sorted = [...results].sort((a, b) => b.score - a.score)
   return (
-    <table className="w-full text-[13px] min-w-[900px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="center">Rating</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="center">Category Breakdown</TH>
-          <TH align="right">Strategies</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("rating") && <TH align="center">Rating</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("breakdown") && <TH align="center">Category Breakdown</TH>}
+          {vis.has("strategies") && <TH align="right">Strategies</TH>}
         </tr>
       </thead>
       <tbody>
@@ -545,25 +882,15 @@ function CompositeTable({ results, fundamentals }: { results: ScanResult[]; fund
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <RatingBadge rating={safeStr(m.rating) || "Neutral"} />
-              </td>
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <td className="px-4 py-2.5">
-                <div className="flex flex-col gap-1">
-                  {Object.entries(cats).map(([cat, score]) => (
-                    <CategoryBar key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} score={score} />
-                  ))}
-                </div>
-              </td>
-              <TD mono align="right" color="var(--text-muted)">
-                {num(m.strategies_used) ?? 0}/11
-              </TD>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("rating") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><RatingBadge rating={safeStr(m.rating) || "Neutral"} /></td>}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("breakdown") && <td className="px-4 py-2.5"><div className="flex flex-col gap-1">{Object.entries(cats).map(([cat, score]) => (<CategoryBar key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} score={score} />))}</div></td>}
+              {vis.has("strategies") && <TD mono align="right" color="var(--text-muted)">{num(m.strategies_used) ?? 0}/11</TD>}
             </tr>
           )
         })}
@@ -576,21 +903,21 @@ function CompositeTable({ results, fundamentals }: { results: ScanResult[]; fund
    SuperTrend Table
    ──────────────────────────────────────────────────────────────── */
 
-function SuperTrendTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function SuperTrendTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[750px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">ST Level</TH>
-          <TH align="center">Direction</TH>
-          <TH align="right">Streak</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("st_level") && <TH align="right">ST Level</TH>}
+          {vis.has("direction") && <TH align="center">Direction</TH>}
+          {vis.has("streak") && <TH align="right">Streak</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -613,22 +940,16 @@ function SuperTrendTable({ results, fundamentals }: { results: ScanResult[]; fun
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmtPrice(m.supertrend)}</TD>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <span className="text-[11px] font-medium" style={{ color: dir === "bullish" ? "var(--color-profit)" : "var(--color-loss)" }}>
-                  {dir === "bullish" ? "▲" : "▼"} {dir ? dir.charAt(0).toUpperCase() + dir.slice(1) : "—"}
-                </span>
-              </td>
-              <TD mono align="right">{num(m.streak) ?? "—"}</TD>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("st_level") && <TD mono align="right">{fmtPrice(m.supertrend)}</TD>}
+              {vis.has("direction") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><span className="text-[11px] font-medium" style={{ color: dir === "bullish" ? "var(--color-profit)" : "var(--color-loss)" }}>{dir === "bullish" ? "▲" : "▼"} {dir ? dir.charAt(0).toUpperCase() + dir.slice(1) : "—"}</span></td>}
+              {vis.has("streak") && <TD mono align="right">{num(m.streak) ?? "—"}</TD>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -641,22 +962,22 @@ function SuperTrendTable({ results, fundamentals }: { results: ScanResult[]; fun
    ADX Table
    ──────────────────────────────────────────────────────────────── */
 
-function ADXTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function ADXTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[850px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">ADX</TH>
-          <TH align="right">+DI</TH>
-          <TH align="right">-DI</TH>
-          <TH align="center">Trend</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("adx") && <TH align="right">ADX</TH>}
+          {vis.has("plus_di") && <TH align="right">+DI</TH>}
+          {vis.has("minus_di") && <TH align="right">-DI</TH>}
+          {vis.has("trend") && <TH align="center">Trend</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -685,30 +1006,17 @@ function ADXTable({ results, fundamentals }: { results: ScanResult[]; fundamenta
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <td
-                className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap"
-                style={{ color: trending ? "var(--color-profit)" : "var(--text-muted)" }}
-              >
-                {fmt(m.adx, 1)}
-              </td>
-              <TD mono align="right" color="var(--color-profit)">{fmt(m.plus_di, 1)}</TD>
-              <TD mono align="right" color="var(--color-loss)">{fmt(m.minus_di, 1)}</TD>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                {trending ? (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}>TRENDING</span>
-                ) : (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-muted)" }}>RANGING</span>
-                )}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("adx") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: trending ? "var(--color-profit)" : "var(--text-muted)" }}>{fmt(m.adx, 1)}</td>}
+              {vis.has("plus_di") && <TD mono align="right" color="var(--color-profit)">{fmt(m.plus_di, 1)}</TD>}
+              {vis.has("minus_di") && <TD mono align="right" color="var(--color-loss)">{fmt(m.minus_di, 1)}</TD>}
+              {vis.has("trend") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{trending ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}>TRENDING</span>) : (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-muted)" }}>RANGING</span>)}</td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -721,21 +1029,21 @@ function ADXTable({ results, fundamentals }: { results: ScanResult[]; fundamenta
    Stochastic Table
    ──────────────────────────────────────────────────────────────── */
 
-function StochasticTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function StochasticTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[750px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">%K</TH>
-          <TH align="right">%D</TH>
-          <TH align="center">Zone</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("pct_k") && <TH align="right">%K</TH>}
+          {vis.has("pct_d") && <TH align="right">%D</TH>}
+          {vis.has("zone") && <TH align="center">Zone</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -766,28 +1074,16 @@ function StochasticTable({ results, fundamentals }: { results: ScanResult[]; fun
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: kColor }}>
-                {fmt(m.pct_k, 1)}
-              </td>
-              <TD mono align="right">{fmt(m.pct_d, 1)}</TD>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                {m.oversold ? (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}>OVERSOLD</span>
-                ) : m.overbought ? (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--loss-10)", color: "var(--color-loss)" }}>OVERBOUGHT</span>
-                ) : (
-                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>—</span>
-                )}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("pct_k") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: kColor }}>{fmt(m.pct_k, 1)}</td>}
+              {vis.has("pct_d") && <TD mono align="right">{fmt(m.pct_d, 1)}</TD>}
+              {vis.has("zone") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.oversold ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--accent-10)", color: "var(--color-profit)" }}>OVERSOLD</span>) : m.overbought ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--loss-10)", color: "var(--color-loss)" }}>OVERBOUGHT</span>) : (<span className="text-[10px]" style={{ color: "var(--text-muted)" }}>—</span>)}</td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -800,23 +1096,23 @@ function StochasticTable({ results, fundamentals }: { results: ScanResult[]; fun
    Bollinger Table
    ──────────────────────────────────────────────────────────────── */
 
-function BollingerTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function BollingerTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[900px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">Upper</TH>
-          <TH align="right">SMA(20)</TH>
-          <TH align="right">Lower</TH>
-          <TH align="right">%B</TH>
-          <TH align="center">Squeeze</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("upper") && <TH align="right">Upper</TH>}
+          {vis.has("sma") && <TH align="right">SMA(20)</TH>}
+          {vis.has("lower") && <TH align="right">Lower</TH>}
+          {vis.has("pct_b") && <TH align="right">%B</TH>}
+          {vis.has("squeeze") && <TH align="center">Squeeze</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -846,31 +1142,18 @@ function BollingerTable({ results, fundamentals }: { results: ScanResult[]; fund
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmtPrice(m.upper)}</TD>
-              <TD mono align="right">{fmtPrice(m.sma)}</TD>
-              <TD mono align="right">{fmtPrice(m.lower)}</TD>
-              <td
-                className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap"
-                style={{ color: pctB !== null && pctB < 0.2 ? "var(--color-profit)" : pctB !== null && pctB > 0.8 ? "var(--color-loss)" : "var(--text-primary)" }}
-              >
-                {fmt(m.pct_b, 3)}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                {m.squeeze ? (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--warning-10)", color: "var(--color-warning)" }}>SQUEEZE</span>
-                ) : (
-                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>—</span>
-                )}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("upper") && <TD mono align="right">{fmtPrice(m.upper)}</TD>}
+              {vis.has("sma") && <TD mono align="right">{fmtPrice(m.sma)}</TD>}
+              {vis.has("lower") && <TD mono align="right">{fmtPrice(m.lower)}</TD>}
+              {vis.has("pct_b") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: pctB !== null && pctB < 0.2 ? "var(--color-profit)" : pctB !== null && pctB > 0.8 ? "var(--color-loss)" : "var(--text-primary)" }}>{fmt(m.pct_b, 3)}</td>}
+              {vis.has("squeeze") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.squeeze ? (<span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--warning-10)", color: "var(--color-warning)" }}>SQUEEZE</span>) : (<span className="text-[10px]" style={{ color: "var(--text-muted)" }}>—</span>)}</td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -883,22 +1166,22 @@ function BollingerTable({ results, fundamentals }: { results: ScanResult[]; fund
    52W High Table
    ──────────────────────────────────────────────────────────────── */
 
-function High52WTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function High52WTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[900px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">52W High</TH>
-          <TH align="right">52W Low</TH>
-          <TH align="right">From High</TH>
-          <TH align="right">Range %</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("high_52w") && <TH align="right">52W High</TH>}
+          {vis.has("low_52w") && <TH align="right">52W Low</TH>}
+          {vis.has("from_high") && <TH align="right">From High</TH>}
+          {vis.has("range") && <TH align="right">Range %</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -930,39 +1213,17 @@ function High52WTable({ results, fundamentals }: { results: ScanResult[]; fundam
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmtPrice(m.high_52w)}</TD>
-              <TD mono align="right">{fmtPrice(m.low_52w)}</TD>
-              <td
-                className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap"
-                style={{ color: pctFromHigh !== null && pctFromHigh >= -5 ? "var(--color-profit)" : pctFromHigh !== null && pctFromHigh <= -20 ? "var(--color-loss)" : "var(--text-primary)" }}
-              >
-                {fmtPct(m.pct_from_high, 1, true)}
-              </td>
-              <td className="px-5 py-2.5 text-right whitespace-nowrap">
-                <div className="flex items-center gap-2 justify-end">
-                  <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(2, rangePosVal * 100)}%`,
-                        backgroundColor: rangePosVal > 0.7 ? "var(--color-profit)" : rangePosVal < 0.3 ? "var(--color-loss)" : "var(--text-muted)",
-                      }}
-                    />
-                  </div>
-                  <span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>
-                    {fmt(rangePos !== null ? rangePos * 100 : null, 0)}%
-                  </span>
-                </div>
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("high_52w") && <TD mono align="right">{fmtPrice(m.high_52w)}</TD>}
+              {vis.has("low_52w") && <TD mono align="right">{fmtPrice(m.low_52w)}</TD>}
+              {vis.has("from_high") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: pctFromHigh !== null && pctFromHigh >= -5 ? "var(--color-profit)" : pctFromHigh !== null && pctFromHigh <= -20 ? "var(--color-loss)" : "var(--text-primary)" }}>{fmtPct(m.pct_from_high, 1, true)}</td>}
+              {vis.has("range") && <td className="px-5 py-2.5 text-right whitespace-nowrap"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}><div className="h-full rounded-full" style={{ width: `${Math.max(2, rangePosVal * 100)}%`, backgroundColor: rangePosVal > 0.7 ? "var(--color-profit)" : rangePosVal < 0.3 ? "var(--color-loss)" : "var(--text-muted)" }} /></div><span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>{fmt(rangePos !== null ? rangePos * 100 : null, 0)}%</span></div></td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -975,22 +1236,22 @@ function High52WTable({ results, fundamentals }: { results: ScanResult[]; fundam
    52W Low Table
    ──────────────────────────────────────────────────────────────── */
 
-function Low52WTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function Low52WTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[900px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">52W Low</TH>
-          <TH align="right">52W High</TH>
-          <TH align="right">From Low</TH>
-          <TH align="right">Range %</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("low_52w") && <TH align="right">52W Low</TH>}
+          {vis.has("high_52w") && <TH align="right">52W High</TH>}
+          {vis.has("from_low") && <TH align="right">From Low</TH>}
+          {vis.has("range") && <TH align="right">Range %</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -1023,39 +1284,17 @@ function Low52WTable({ results, fundamentals }: { results: ScanResult[]; fundame
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmtPrice(m.low_52w)}</TD>
-              <TD mono align="right">{fmtPrice(m.high_52w)}</TD>
-              <td
-                className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap"
-                style={{ color: pctFromLow !== null && pctFromLow <= 5 ? "var(--color-loss)" : pctFromLow !== null && pctFromLow >= 20 ? "var(--color-profit)" : "var(--text-primary)" }}
-              >
-                {fmtPct(m.pct_from_low, 1, true)}
-              </td>
-              <td className="px-5 py-2.5 text-right whitespace-nowrap">
-                <div className="flex items-center gap-2 justify-end">
-                  <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(2, rangePosVal * 100)}%`,
-                        backgroundColor: rangePosVal < 0.3 ? "var(--color-loss)" : rangePosVal > 0.7 ? "var(--color-profit)" : "var(--text-muted)",
-                      }}
-                    />
-                  </div>
-                  <span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>
-                    {fmt(rangePos !== null ? rangePos * 100 : null, 0)}%
-                  </span>
-                </div>
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={signalLabel[signal] || signal} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("low_52w") && <TD mono align="right">{fmtPrice(m.low_52w)}</TD>}
+              {vis.has("high_52w") && <TD mono align="right">{fmtPrice(m.high_52w)}</TD>}
+              {vis.has("from_low") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: pctFromLow !== null && pctFromLow <= 5 ? "var(--color-loss)" : pctFromLow !== null && pctFromLow >= 20 ? "var(--color-profit)" : "var(--text-primary)" }}>{fmtPct(m.pct_from_low, 1, true)}</td>}
+              {vis.has("range") && <td className="px-5 py-2.5 text-right whitespace-nowrap"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--bg-secondary)" }}><div className="h-full rounded-full" style={{ width: `${Math.max(2, rangePosVal * 100)}%`, backgroundColor: rangePosVal < 0.3 ? "var(--color-loss)" : rangePosVal > 0.7 ? "var(--color-profit)" : "var(--text-muted)" }} /></div><span className="text-[11px] font-mono tabular-nums" style={{ color: "var(--text-muted)" }}>{fmt(rangePos !== null ? rangePos * 100 : null, 0)}%</span></div></td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={signalLabel[signal] || signal} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -1068,21 +1307,21 @@ function Low52WTable({ results, fundamentals }: { results: ScanResult[]; fundame
    Original 4 strategies
    ──────────────────────────────────────────────────────────────── */
 
-function FibTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function FibTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[780px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">52W High</TH>
-          <TH align="right">52W Low</TH>
-          <TH align="right">Fib 0.618</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("high") && <TH align="right">52W High</TH>}
+          {vis.has("low") && <TH align="right">52W Low</TH>}
+          {vis.has("fib_618") && <TH align="right">Fib 0.618</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -1094,22 +1333,16 @@ function FibTable({ results, fundamentals }: { results: ScanResult[]; fundamenta
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmtPrice(m.high_6m)}</TD>
-              <TD mono align="right">{fmtPrice(m.low_6m)}</TD>
-              <TD mono align="right">{fmtPrice(m.fib_618)}</TD>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                {m.near_618 ? (
-                  <SignalBadge signal="Near 0.618" variant="warning" />
-                ) : (
-                  <span style={{ color: "var(--text-muted)" }}>—</span>
-                )}
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("high") && <TD mono align="right">{fmtPrice(m.high_6m)}</TD>}
+              {vis.has("low") && <TD mono align="right">{fmtPrice(m.low_6m)}</TD>}
+              {vis.has("fib_618") && <TD mono align="right">{fmtPrice(m.fib_618)}</TD>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.near_618 ? (<SignalBadge signal="Near 0.618" variant="warning" />) : (<span style={{ color: "var(--text-muted)" }}>—</span>)}</td>}
             </tr>
           )
         })}
@@ -1118,23 +1351,23 @@ function FibTable({ results, fundamentals }: { results: ScanResult[]; fundamenta
   )
 }
 
-function PivotTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function PivotTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[850px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">Pivot</TH>
-          <TH align="right">S1</TH>
-          <TH align="right">S2</TH>
-          <TH align="right">R1</TH>
-          <TH align="right">R2</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("pivot") && <TH align="right">Pivot</TH>}
+          {vis.has("s1") && <TH align="right">S1</TH>}
+          {vis.has("s2") && <TH align="right">S2</TH>}
+          {vis.has("r1") && <TH align="right">R1</TH>}
+          {vis.has("r2") && <TH align="right">R2</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -1161,20 +1394,18 @@ function PivotTable({ results, fundamentals }: { results: ScanResult[]; fundamen
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmtPrice(m.pivot)}</TD>
-              <TD mono align="right">{fmtPrice(m.s1)}</TD>
-              <TD mono align="right">{fmtPrice(m.s2)}</TD>
-              <TD mono align="right">{fmtPrice(m.r1)}</TD>
-              <TD mono align="right">{fmtPrice(m.r2)}</TD>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={label} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("pivot") && <TD mono align="right">{fmtPrice(m.pivot)}</TD>}
+              {vis.has("s1") && <TD mono align="right">{fmtPrice(m.s1)}</TD>}
+              {vis.has("s2") && <TD mono align="right">{fmtPrice(m.s2)}</TD>}
+              {vis.has("r1") && <TD mono align="right">{fmtPrice(m.r1)}</TD>}
+              {vis.has("r2") && <TD mono align="right">{fmtPrice(m.r2)}</TD>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={label} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -1183,21 +1414,21 @@ function PivotTable({ results, fundamentals }: { results: ScanResult[]; fundamen
   )
 }
 
-function MACDTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function MACDTable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[780px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">MACD</TH>
-          <TH align="right">Signal</TH>
-          <TH align="right">Histogram</TH>
-          <TH align="center">Trend</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("macd") && <TH align="right">MACD</TH>}
+          {vis.has("signal_line") && <TH align="right">Signal</TH>}
+          {vis.has("histogram") && <TH align="right">Histogram</TH>}
+          {vis.has("trend") && <TH align="center">Trend</TH>}
         </tr>
       </thead>
       <tbody>
@@ -1228,20 +1459,16 @@ function MACDTable({ results, fundamentals }: { results: ScanResult[]; fundament
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <TD mono align="right">{fmt(m.macd, 2)}</TD>
-              <TD mono align="right">{fmt(m.signal_line, 2)}</TD>
-              <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: histColor }}>
-                {histVal > 0 ? "+" : ""}{fmt(m.histogram, 2)}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={label} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("macd") && <TD mono align="right">{fmt(m.macd, 2)}</TD>}
+              {vis.has("signal_line") && <TD mono align="right">{fmt(m.signal_line, 2)}</TD>}
+              {vis.has("histogram") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: histColor }}>{histVal > 0 ? "+" : ""}{fmt(m.histogram, 2)}</td>}
+              {vis.has("trend") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={label} variant={variant} /></td>}
             </tr>
           )
         })}
@@ -1250,20 +1477,20 @@ function MACDTable({ results, fundamentals }: { results: ScanResult[]; fundament
   )
 }
 
-function RSITable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
+function RSITable({ results, fundamentals, vis }: TableProps) {
   return (
-    <table className="w-full text-[13px] min-w-[680px]">
+    <table className="w-full text-[13px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
-          <TH>#</TH>
-          <TH>Ticker</TH>
-          <TH align="right">P/E</TH>
-          <TH align="right">PEG</TH>
-          <TH align="right">Score</TH>
-          <TH align="right">Current</TH>
-          <TH align="right">RSI</TH>
-          <TH align="center">Trend</TH>
-          <TH align="center">Signal</TH>
+          {vis.has("rank") && <TH>#</TH>}
+          {vis.has("ticker") && <TH>Ticker</TH>}
+          {vis.has("pe") && <TH align="right">P/E</TH>}
+          {vis.has("peg") && <TH align="right">PEG</TH>}
+          {vis.has("score") && <TH align="right">Score</TH>}
+          {vis.has("current") && <TH align="right">Current</TH>}
+          {vis.has("rsi") && <TH align="right">RSI</TH>}
+          {vis.has("trend") && <TH align="center">Trend</TH>}
+          {vis.has("signal") && <TH align="center">Signal</TH>}
         </tr>
       </thead>
       <tbody>
@@ -1293,25 +1520,15 @@ function RSITable({ results, fundamentals }: { results: ScanResult[]; fundamenta
               className="transition-colors duration-150 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}
             >
-              <TD mono color="var(--text-muted)">{i + 1}</TD>
-              <TickerCell ticker={r.ticker} />
-              <PECell ticker={r.ticker} fundamentals={fundamentals} />
-              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
-              <ScoreCell score={r.score} />
-              <TD mono align="right">{fmtPrice(m.current)}</TD>
-              <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: rsiColor }}>
-                {fmt(m.rsi, 1)}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                {m.rsi_rising ? (
-                  <span className="text-[11px] font-medium" style={{ color: "var(--color-profit)" }}>▲</span>
-                ) : (
-                  <span className="text-[11px] font-medium" style={{ color: "var(--color-loss)" }}>▼</span>
-                )}
-              </td>
-              <td className="px-5 py-2.5 text-center whitespace-nowrap">
-                <SignalBadge signal={label} variant={variant} />
-              </td>
+              {vis.has("rank") && <TD mono color="var(--text-muted)">{i + 1}</TD>}
+              {vis.has("ticker") && <TickerCell ticker={r.ticker} />}
+              {vis.has("pe") && <PECell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("peg") && <PEGCell ticker={r.ticker} fundamentals={fundamentals} />}
+              {vis.has("score") && <ScoreCell score={r.score} />}
+              {vis.has("current") && <TD mono align="right">{fmtPrice(m.current)}</TD>}
+              {vis.has("rsi") && <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: rsiColor }}>{fmt(m.rsi, 1)}</td>}
+              {vis.has("trend") && <td className="px-5 py-2.5 text-center whitespace-nowrap">{m.rsi_rising ? (<span className="text-[11px] font-medium" style={{ color: "var(--color-profit)" }}>▲</span>) : (<span className="text-[11px] font-medium" style={{ color: "var(--color-loss)" }}>▼</span>)}</td>}
+              {vis.has("signal") && <td className="px-5 py-2.5 text-center whitespace-nowrap"><SignalBadge signal={label} variant={variant} /></td>}
             </tr>
           )
         })}
