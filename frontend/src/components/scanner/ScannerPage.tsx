@@ -48,6 +48,24 @@ function safeStr(v: unknown): string {
   return typeof v === "string" ? v : ""
 }
 
+type FundamentalsMap = Record<string, { pe_ratio: number | null; peg_ratio: number | null }>
+
+function PECell({ ticker, fundamentals }: { ticker: string; fundamentals: FundamentalsMap }) {
+  const f = fundamentals[ticker]
+  const pe = f?.pe_ratio
+  if (pe == null) return <TD mono align="right" color="var(--text-muted)">—</TD>
+  const color = pe < 0 ? "var(--color-loss)" : pe > 40 ? "var(--color-warning, var(--text-muted))" : "var(--text-primary)"
+  return <TD mono align="right" color={color}>{pe.toFixed(1)}</TD>
+}
+
+function PEGCell({ ticker, fundamentals }: { ticker: string; fundamentals: FundamentalsMap }) {
+  const f = fundamentals[ticker]
+  const peg = f?.peg_ratio
+  if (peg == null) return <TD mono align="right" color="var(--text-muted)">—</TD>
+  const color = peg < 1 ? "var(--color-profit)" : peg > 2 ? "var(--color-loss)" : "var(--text-primary)"
+  return <TD mono align="right" color={color}>{peg.toFixed(2)}</TD>
+}
+
 type StrategyKey =
   | "composite"
   | "supertrend"
@@ -173,6 +191,7 @@ export function ScannerPage() {
   const [scanning, setScanning] = useState(false)
   const [activeTab, setActiveTab] = useState<StrategyKey>("fibonacci_retracement")
   const [tabOrder, setTabOrder] = useState<StrategyKey[]>(loadTabOrder)
+  const [fundamentals, setFundamentals] = useState<FundamentalsMap>({})
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -200,7 +219,13 @@ export function ScannerPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  useEffect(() => { fetchResults() }, [fetchResults])
+  const fetchFundamentals = useCallback(() => {
+    api.getFundamentals()
+      .then((data) => setFundamentals(data))
+      .catch(() => { /* fundamentals are supplementary, don't block UI */ })
+  }, [])
+
+  useEffect(() => { fetchResults(); fetchFundamentals() }, [fetchResults, fetchFundamentals])
 
   useEffect(() => {
     const handler = () => fetchResults()
@@ -356,17 +381,17 @@ export function ScannerPage() {
               </div>
             ) : (
               <div className="w-full overflow-x-auto" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
-                {activeTab === "composite" && <CompositeTable results={filtered} />}
-                {activeTab === "supertrend" && <SuperTrendTable results={filtered} />}
-                {activeTab === "adx" && <ADXTable results={filtered} />}
-                {activeTab === "rsi" && <RSITable results={filtered} />}
-                {activeTab === "macd" && <MACDTable results={filtered} />}
-                {activeTab === "stochastic" && <StochasticTable results={filtered} />}
-                {activeTab === "fibonacci_retracement" && <FibTable results={filtered} />}
-                {activeTab === "bollinger" && <BollingerTable results={filtered} />}
-                {activeTab === "52w_high" && <High52WTable results={filtered} />}
-                {activeTab === "52w_low" && <Low52WTable results={filtered} />}
-                {activeTab === "pivot_point" && <PivotTable results={filtered} />}
+                {activeTab === "composite" && <CompositeTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "supertrend" && <SuperTrendTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "adx" && <ADXTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "rsi" && <RSITable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "macd" && <MACDTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "stochastic" && <StochasticTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "fibonacci_retracement" && <FibTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "bollinger" && <BollingerTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "52w_high" && <High52WTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "52w_low" && <Low52WTable results={filtered} fundamentals={fundamentals} />}
+                {activeTab === "pivot_point" && <PivotTable results={filtered} fundamentals={fundamentals} />}
               </div>
             )}
           </div>
@@ -493,7 +518,7 @@ function CategoryBar({ score, label }: { score: number; label: string }) {
    Composite Table
    ──────────────────────────────────────────────────────────────── */
 
-function CompositeTable({ results }: { results: ScanResult[] }) {
+function CompositeTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   const sorted = [...results].sort((a, b) => b.score - a.score)
   return (
     <table className="w-full text-[13px] min-w-[900px]">
@@ -501,6 +526,8 @@ function CompositeTable({ results }: { results: ScanResult[] }) {
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="center">Rating</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
@@ -520,6 +547,8 @@ function CompositeTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <td className="px-5 py-2.5 text-center whitespace-nowrap">
                 <RatingBadge rating={safeStr(m.rating) || "Neutral"} />
               </td>
@@ -547,13 +576,15 @@ function CompositeTable({ results }: { results: ScanResult[] }) {
    SuperTrend Table
    ──────────────────────────────────────────────────────────────── */
 
-function SuperTrendTable({ results }: { results: ScanResult[] }) {
+function SuperTrendTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[750px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">ST Level</TH>
@@ -584,6 +615,8 @@ function SuperTrendTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmtPrice(m.supertrend)}</TD>
@@ -608,13 +641,15 @@ function SuperTrendTable({ results }: { results: ScanResult[] }) {
    ADX Table
    ──────────────────────────────────────────────────────────────── */
 
-function ADXTable({ results }: { results: ScanResult[] }) {
+function ADXTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[850px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">ADX</TH>
@@ -652,6 +687,8 @@ function ADXTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <td
@@ -684,13 +721,15 @@ function ADXTable({ results }: { results: ScanResult[] }) {
    Stochastic Table
    ──────────────────────────────────────────────────────────────── */
 
-function StochasticTable({ results }: { results: ScanResult[] }) {
+function StochasticTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[750px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">%K</TH>
@@ -729,6 +768,8 @@ function StochasticTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: kColor }}>
@@ -759,13 +800,15 @@ function StochasticTable({ results }: { results: ScanResult[] }) {
    Bollinger Table
    ──────────────────────────────────────────────────────────────── */
 
-function BollingerTable({ results }: { results: ScanResult[] }) {
+function BollingerTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[900px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">Upper</TH>
@@ -805,6 +848,8 @@ function BollingerTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmtPrice(m.upper)}</TD>
@@ -838,13 +883,15 @@ function BollingerTable({ results }: { results: ScanResult[] }) {
    52W High Table
    ──────────────────────────────────────────────────────────────── */
 
-function High52WTable({ results }: { results: ScanResult[] }) {
+function High52WTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[900px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">52W High</TH>
@@ -885,6 +932,8 @@ function High52WTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmtPrice(m.high_52w)}</TD>
@@ -926,13 +975,15 @@ function High52WTable({ results }: { results: ScanResult[] }) {
    52W Low Table
    ──────────────────────────────────────────────────────────────── */
 
-function Low52WTable({ results }: { results: ScanResult[] }) {
+function Low52WTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[900px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">52W Low</TH>
@@ -974,6 +1025,8 @@ function Low52WTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmtPrice(m.low_52w)}</TD>
@@ -1015,13 +1068,15 @@ function Low52WTable({ results }: { results: ScanResult[] }) {
    Original 4 strategies
    ──────────────────────────────────────────────────────────────── */
 
-function FibTable({ results }: { results: ScanResult[] }) {
+function FibTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[780px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">52W High</TH>
@@ -1041,6 +1096,8 @@ function FibTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmtPrice(m.high_6m)}</TD>
@@ -1061,13 +1118,15 @@ function FibTable({ results }: { results: ScanResult[] }) {
   )
 }
 
-function PivotTable({ results }: { results: ScanResult[] }) {
+function PivotTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[850px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">Pivot</TH>
@@ -1104,6 +1163,8 @@ function PivotTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmtPrice(m.pivot)}</TD>
@@ -1122,13 +1183,15 @@ function PivotTable({ results }: { results: ScanResult[] }) {
   )
 }
 
-function MACDTable({ results }: { results: ScanResult[] }) {
+function MACDTable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[780px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">MACD</TH>
@@ -1167,6 +1230,8 @@ function MACDTable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <TD mono align="right">{fmt(m.macd, 2)}</TD>
@@ -1185,13 +1250,15 @@ function MACDTable({ results }: { results: ScanResult[] }) {
   )
 }
 
-function RSITable({ results }: { results: ScanResult[] }) {
+function RSITable({ results, fundamentals }: { results: ScanResult[]; fundamentals: FundamentalsMap }) {
   return (
     <table className="w-full text-[13px] min-w-[680px]">
       <thead>
         <tr style={{ backgroundColor: "var(--bg-card)" }}>
           <TH>#</TH>
           <TH>Ticker</TH>
+          <TH align="right">P/E</TH>
+          <TH align="right">PEG</TH>
           <TH align="right">Score</TH>
           <TH align="right">Current</TH>
           <TH align="right">RSI</TH>
@@ -1228,6 +1295,8 @@ function RSITable({ results }: { results: ScanResult[] }) {
             >
               <TD mono color="var(--text-muted)">{i + 1}</TD>
               <TickerCell ticker={r.ticker} />
+              <PECell ticker={r.ticker} fundamentals={fundamentals} />
+              <PEGCell ticker={r.ticker} fundamentals={fundamentals} />
               <ScoreCell score={r.score} />
               <TD mono align="right">{fmtPrice(m.current)}</TD>
               <td className="px-5 py-2.5 text-right font-mono tabular-nums whitespace-nowrap" style={{ color: rsiColor }}>

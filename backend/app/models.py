@@ -104,3 +104,16 @@ class NseStock(Base):
     series: Mapped[str] = mapped_column(String(10), nullable=False, default="EQ")
     isin: Mapped[str] = mapped_column(String(20), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class StockFundamentals(Base):
+    __tablename__ = "stock_fundamentals"
+
+    ticker: Mapped[str] = mapped_column(String(30), primary_key=True)
+    pe_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    peg_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    eps: Mapped[float | None] = mapped_column(Float, nullable=True)
+    earnings_growth: Mapped[float | None] = mapped_column(Float, nullable=True)
+    market_cap: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

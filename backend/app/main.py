@@ -8,12 +8,13 @@ from fastapi.staticfiles import StaticFiles
 from .auth import require_auth
 from .database import init_db, async_session
 from .models import Member
-from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth, stocks
+from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth, stocks, fundamentals
 from .services.price_service import start_polling, stop_polling
 from .services.nse_master import refresh_nse_master_list
 from .services.fyers_auth import ensure_valid_token
 from .services.fyers_callback import start_callback_server, stop_callback_server
 from .services.scan_scheduler import start_scan_scheduler, stop_scan_scheduler
+from .services.fundamentals_scheduler import start_fundamentals_scheduler, stop_fundamentals_scheduler
 from .services.nifty_index import refresh_nifty200
 
 FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Manikandan", "Devi"]
@@ -42,7 +43,9 @@ async def lifespan(app: FastAPI):
     nifty_task = asyncio.create_task(refresh_nifty200())
     nifty_task.add_done_callback(lambda t: t.exception() if not t.cancelled() and t.exception() else None)
     start_scan_scheduler()
+    start_fundamentals_scheduler()
     yield
+    stop_fundamentals_scheduler()
     stop_scan_scheduler()
     stop_polling()
     await stop_callback_server()
@@ -72,6 +75,7 @@ app.include_router(nse.router)
 app.include_router(alerts.router)
 app.include_router(google_auth.router)
 app.include_router(stocks.router)
+app.include_router(fundamentals.router)
 
 
 @app.get("/api/health")

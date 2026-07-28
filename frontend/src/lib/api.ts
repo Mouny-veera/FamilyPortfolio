@@ -213,6 +213,7 @@ export const api = {
   getScanResults: () => request<ScanResult[]>("/scanner/results"),
   runScanner: () => request<{ status: string }>("/scanner/run", { method: "POST" }),
   getScanStatus: () => request<{ running: boolean; error: string | null }>("/scanner/status"),
+  getFundamentals: () => request<Record<string, { pe_ratio: number | null; peg_ratio: number | null; eps: number | null; market_cap: number | null; sector: string | null; updated_at: string | null }>>("/fundamentals"),
   refreshPrices: () => request<{ updated: number }>("/settings/refresh-prices", { method: "POST" }),
   searchNse: (q: string) => request<NseSearchResult[]>(`/nse/search?q=${encodeURIComponent(q)}`),
   refreshNseMaster: () => request<{ status: string; count?: number }>("/nse/refresh-master", { method: "POST" }),
