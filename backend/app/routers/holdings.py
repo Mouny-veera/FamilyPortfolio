@@ -68,6 +68,16 @@ async def add_buy(req: BuyRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Member not found")
 
     ticker = req.ticker.upper().strip()
+    if not ticker:
+        raise HTTPException(status_code=400, detail="Ticker cannot be empty")
+
+    from ..services.nse_master import is_valid_nse_symbol
+    if not is_valid_nse_symbol(ticker):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{ticker}' is not a valid NSE symbol. Please select from the search suggestions.",
+        )
+
     buy_value = round(req.buy_qty * req.buy_rate, 2)
     fy = derive_financial_year(req.buy_date)
     label = await _next_lot_label(db, req.member_id, ticker)

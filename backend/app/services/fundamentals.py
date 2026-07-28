@@ -61,6 +61,7 @@ def _compute_peg(pe: float | None, eps_current: float | None, eps_previous: floa
 
 def _fetch_bse_single(ticker: str) -> dict | None:
     from bse import BSE
+    from .nse_master import get_nse_isin
 
     b = BSE(download_folder="/tmp/bse_data")
     try:
@@ -77,6 +78,12 @@ def _fetch_bse_single(ticker: str) -> dict | None:
 
         meta = b.equityMetaInfo(code)
         if not meta:
+            return None
+
+        bse_isin = meta.get("ISIN", "").strip()
+        nse_isin = get_nse_isin(ticker)
+        if bse_isin and nse_isin and bse_isin != nse_isin:
+            print(f"[Fundamentals] ISIN mismatch for {ticker}: NSE={nse_isin}, BSE={bse_isin} — skipping BSE data")
             return None
 
         con_pe = _sanitize(meta.get("ConPE"))
@@ -133,6 +140,7 @@ def _fetch_bse_single(ticker: str) -> dict | None:
             "roe": _sanitize(meta.get("ConROE")) or _sanitize(meta.get("ROE")),
             "npm": _sanitize(meta.get("ConNPM")) or _sanitize(meta.get("NPM")),
             "face_value": _sanitize(meta.get("FaceVal")),
+            "isin": bse_isin or None,
             "data_source": "bse",
             "bse_scrip_code": str(code),
         }
@@ -161,6 +169,7 @@ def _fetch_yfinance_single(ticker: str) -> dict | None:
         "roe": _sanitize(info.get("returnOnEquity")),
         "npm": _sanitize(info.get("profitMargins")),
         "face_value": None,
+        "isin": info.get("isin"),
         "data_source": "yfinance",
         "bse_scrip_code": None,
     }

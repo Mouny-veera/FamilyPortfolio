@@ -70,6 +70,12 @@ class _StockCache:
     def get_series(self, symbol: str) -> str:
         return self._series_map.get(symbol, "EQ")
 
+    def get_isin(self, symbol: str) -> str | None:
+        for s in self._stocks:
+            if s.symbol == symbol:
+                return s.isin or None
+        return None
+
     def search(self, query: str, limit: int = 10) -> list[dict]:
         q = query.upper().strip()
         if not q:
@@ -254,6 +260,10 @@ def is_valid_nse_symbol(symbol: str) -> bool:
 
 def get_nse_symbol_set() -> set[str]:
     return _cache.symbol_set
+
+
+def get_nse_isin(ticker: str) -> str | None:
+    return _cache.get_isin(ticker)
 
 
 def get_fyers_symbol(ticker: str) -> str | None:

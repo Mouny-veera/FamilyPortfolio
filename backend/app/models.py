@@ -121,6 +121,7 @@ class StockFundamentals(Base):
     roe: Mapped[float | None] = mapped_column(Float, nullable=True)
     npm: Mapped[float | None] = mapped_column(Float, nullable=True)
     face_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    isin: Mapped[str | None] = mapped_column(String(20), nullable=True)
     data_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     bse_scrip_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
