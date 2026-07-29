@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
 
+from ..auth import quote_limiter, chart_limiter
 from ..services.market_data import get_active_provider
 
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
@@ -24,6 +25,7 @@ async def get_stock_chart(
     ticker: str,
     range: str = Query("6M", pattern="^(1D|1W|1M|3M|6M|1Y|5Y)$"),
 ):
+    chart_limiter.check()
     resolution, days = RESOLUTION_MAP[range]
     provider = get_active_provider()
 
@@ -130,6 +132,7 @@ async def get_stock_chart(
 
 @router.get("/{ticker}/quote")
 async def get_stock_quote(ticker: str):
+    quote_limiter.check()
     provider = get_active_provider()
 
     from ..services.market_data import FyersProvider

@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import require_auth
@@ -15,6 +16,7 @@ from .services.fyers_auth import ensure_valid_token
 from .services.fyers_callback import start_callback_server, stop_callback_server
 from .services.scan_scheduler import start_scan_scheduler, stop_scan_scheduler
 from .services.fundamentals_scheduler import start_fundamentals_scheduler, stop_fundamentals_scheduler
+from .services.backup_scheduler import start_backup_scheduler, stop_backup_scheduler
 from .services.nifty_index import refresh_nifty200
 
 FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Manikandan", "Devi"]
@@ -44,7 +46,9 @@ async def lifespan(app: FastAPI):
     nifty_task.add_done_callback(lambda t: t.exception() if not t.cancelled() and t.exception() else None)
     start_scan_scheduler()
     start_fundamentals_scheduler()
+    start_backup_scheduler()
     yield
+    stop_backup_scheduler()
     stop_fundamentals_scheduler()
     stop_scan_scheduler()
     stop_polling()
@@ -65,6 +69,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
+
 
 app.include_router(members.router)
 app.include_router(holdings.router)

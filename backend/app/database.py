@@ -1,4 +1,4 @@
-import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -31,7 +31,11 @@ def backup_database(max_backups: int = 10):
         return
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     dest = BACKUP_DIR / f"portfolio_{stamp}.db"
-    shutil.copy2(DB_PATH, dest)
+    src_conn = sqlite3.connect(str(DB_PATH))
+    dst_conn = sqlite3.connect(str(dest))
+    src_conn.backup(dst_conn)
+    dst_conn.close()
+    src_conn.close()
     print(f"Database backup: {dest.name}")
 
     backups = sorted(BACKUP_DIR.glob("portfolio_*.db"), key=lambda p: p.stat().st_mtime)
@@ -54,13 +58,18 @@ async def _migrate_add_columns(conn):
         try:
             await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
             print(f"[Migration] Added {table}.{column}")
-        except Exception:
-            pass
+        except Exception as e:
+            if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
+                pass
+            else:
+                print(f"[Migration] UNEXPECTED ERROR adding {table}.{column}: {e}")
+                raise
 
 
 async def init_db():
     backup_database()
     async with engine.begin() as conn:
         await conn.execute(text("PRAGMA journal_mode=WAL"))
+        await conn.execute(text("PRAGMA busy_timeout=5000"))
         await conn.run_sync(Base.metadata.create_all)
         await _migrate_add_columns(conn)

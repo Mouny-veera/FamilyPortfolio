@@ -7,6 +7,7 @@ and shows a result page. Runs alongside the main FastAPI app.
 """
 
 import asyncio
+from html import escape as html_escape
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -36,7 +37,7 @@ p {{ font-size: 14px; color: #94a3b8; margin: 0 0 24px; line-height: 1.6; }}
 <div class="card">
   <div class="icon">{icon}</div>
   <h1>{title}</h1>
-  <p>{message}</p>
+  <p>{html_escape(message)}</p>
   <p class="hint">You can close this tab and go back to the app.</p>
 </div>
 </body></html>"""

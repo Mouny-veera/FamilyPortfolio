@@ -50,15 +50,23 @@ async def _scheduler_loop():
         await asyncio.sleep(60)
 
 
+def _on_scheduler_done(t: asyncio.Task):
+    global _scheduler_task
+    if t.cancelled():
+        return
+    exc = t.exception()
+    if exc:
+        print(f"[Fundamentals] Scheduler crashed: {exc}, restarting in 30s...")
+        loop = asyncio.get_event_loop()
+        loop.call_later(30, start_fundamentals_scheduler)
+
+
 def start_fundamentals_scheduler():
     global _scheduler_task
-    if _scheduler_task is not None:
+    if _scheduler_task is not None and not _scheduler_task.done():
         return
     _scheduler_task = asyncio.create_task(_scheduler_loop())
-    _scheduler_task.add_done_callback(
-        lambda t: print(f"[Fundamentals] Scheduler stopped: {t.exception()}")
-        if not t.cancelled() and t.exception() else None
-    )
+    _scheduler_task.add_done_callback(_on_scheduler_done)
     print("[Fundamentals] Scheduler started")
 
 

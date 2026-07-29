@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +13,8 @@ from ..schemas import (
 from ..services.nse_master import fuzzy_match_ticker, get_nse_symbol_set
 
 router = APIRouter(prefix="/api/holdings", tags=["holdings"])
+
+_sell_locks: dict[int, asyncio.Lock] = {}
 
 
 async def _next_lot_label(db: AsyncSession, member_id: int, ticker: str) -> str:
@@ -101,50 +105,56 @@ async def add_buy(req: BuyRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/sell", response_model=RealizedPnLOut)
 async def sell_lot(req: SellRequest, db: AsyncSession = Depends(get_db)):
-    async with db.begin():
-        lot_result = await db.execute(
-            select(Lot).where(Lot.id == req.lot_id).with_for_update()
-        )
-        lot = lot_result.scalar_one_or_none()
-        if not lot:
-            raise HTTPException(status_code=404, detail="Lot not found")
+    if req.lot_id not in _sell_locks:
+        _sell_locks[req.lot_id] = asyncio.Lock()
+    async with _sell_locks[req.lot_id]:
+        async with db.begin():
+            lot_result = await db.execute(
+                select(Lot).where(Lot.id == req.lot_id).with_for_update()
+            )
+            lot = lot_result.scalar_one_or_none()
+            if not lot:
+                raise HTTPException(status_code=404, detail="Lot not found")
 
-        if round(req.sell_qty, 4) > round(lot.buy_qty, 4):
-            raise HTTPException(status_code=400, detail="Sell qty exceeds lot qty")
+            if req.sell_date < lot.buy_date:
+                raise HTTPException(status_code=400, detail="Sell date cannot be before buy date")
 
-        sell_value = round(req.sell_qty * req.sell_rate, 2)
-        proportional_buy_value = round((req.sell_qty / lot.buy_qty) * lot.buy_value, 2)
-        profit_loss = round(sell_value - proportional_buy_value, 2)
-        profit_loss_pct = round((profit_loss / proportional_buy_value) * 100, 4) if proportional_buy_value > 0 else 0
+            if round(req.sell_qty, 4) > round(lot.buy_qty, 4):
+                raise HTTPException(status_code=400, detail="Sell qty exceeds lot qty")
 
-        pnl = RealizedPnL(
-            member_id=lot.member_id,
-            ticker=lot.ticker,
-            buy_date=lot.buy_date,
-            buy_qty=req.sell_qty,
-            buy_rate=lot.buy_rate,
-            buy_value=proportional_buy_value,
-            sell_date=req.sell_date,
-            sell_qty=req.sell_qty,
-            sell_rate=req.sell_rate,
-            sell_value=sell_value,
-            profit_loss=profit_loss,
-            profit_loss_pct=profit_loss_pct,
-            financial_year=derive_financial_year(req.sell_date),
-            lot_label=lot.lot_label,
-            notes=lot.notes,
-        )
-        db.add(pnl)
+            sell_value = round(req.sell_qty * req.sell_rate, 2)
+            proportional_buy_value = round((req.sell_qty / lot.buy_qty) * lot.buy_value, 2)
+            profit_loss = round(sell_value - proportional_buy_value, 2)
+            profit_loss_pct = round((profit_loss / proportional_buy_value) * 100, 4) if proportional_buy_value > 0 else 0
 
-        remaining_qty = round(lot.buy_qty - req.sell_qty, 4)
-        if remaining_qty <= 0:
-            await db.delete(lot)
-        else:
-            lot.buy_qty = remaining_qty
-            lot.buy_value = round(lot.buy_value - proportional_buy_value, 2)
+            pnl = RealizedPnL(
+                member_id=lot.member_id,
+                ticker=lot.ticker,
+                buy_date=lot.buy_date,
+                buy_qty=req.sell_qty,
+                buy_rate=lot.buy_rate,
+                buy_value=proportional_buy_value,
+                sell_date=req.sell_date,
+                sell_qty=req.sell_qty,
+                sell_rate=req.sell_rate,
+                sell_value=sell_value,
+                profit_loss=profit_loss,
+                profit_loss_pct=profit_loss_pct,
+                financial_year=derive_financial_year(req.sell_date),
+                lot_label=lot.lot_label,
+                notes=lot.notes,
+            )
+            db.add(pnl)
 
-        await db.flush()
-        await db.refresh(pnl)
+            remaining_qty = round(lot.buy_qty - req.sell_qty, 4)
+            if remaining_qty <= 0:
+                await db.delete(lot)
+            else:
+                lot.buy_qty = remaining_qty
+                lot.buy_value = max(round(remaining_qty * lot.buy_rate, 2), 0.01)
+
+            await db.flush()
+            await db.refresh(pnl)
 
     return pnl
 
@@ -166,6 +176,13 @@ async def sell_group(req: SellGroupRequest, db: AsyncSession = Depends(get_db)):
         lots = lots_result.scalars().all()
         if not lots:
             raise HTTPException(status_code=404, detail="No active lots for this ticker")
+
+        for lot in lots:
+            if req.sell_date < lot.buy_date:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Sell date cannot be before buy date of lot {lot.lot_label} ({lot.buy_date})",
+                )
 
         results = []
         for lot in lots:

@@ -1,6 +1,9 @@
+from html import escape as html_escape
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from ..auth import price_refresh_limiter, nifty_refresh_limiter, token_refresh_limiter
 from ..services.price_service import refresh_prices
 from ..services.market_data import load_config, save_config, get_active_provider, FyersProvider
 from ..services.fyers_auth import generate_fyers_token, exchange_auth_code
@@ -12,6 +15,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 @router.post("/refresh-prices")
 async def manual_refresh():
+    price_refresh_limiter.check()
     result = await refresh_prices()
     return result
 
@@ -112,6 +116,7 @@ async def fyers_token_status():
 
 @router.post("/fyers/refresh-token")
 async def manual_token_refresh():
+    token_refresh_limiter.check()
     result = await generate_fyers_token()
     return result
 
@@ -141,7 +146,7 @@ async def fyers_callback(request: Request):
             '<html><body><script>window.location.href="/settings?fyers=connected";</script></body></html>'
         )
     return HTMLResponse(
-        f'<html><body><h2>Token exchange failed</h2><p>{result["message"]}</p>'
+        f'<html><body><h2>Token exchange failed</h2><p>{html_escape(result["message"])}</p>'
         f'<a href="/settings">Back to Settings</a></body></html>',
         status_code=500,
     )
@@ -157,6 +162,7 @@ async def remove_fyers():
 
 @router.post("/refresh-nifty200")
 async def manual_refresh_nifty200():
+    nifty_refresh_limiter.check()
     result = await refresh_nifty200()
     return result
 
@@ -176,6 +182,14 @@ async def nifty200_status():
                 "source": data.get("source", "static file"),
             }
     return {"count": 0, "updated_at": None, "source": "none"}
+
+
+@router.post("/backup")
+async def manual_backup():
+    from ..services.backup_scheduler import run_backup_cycle
+    import asyncio
+    await asyncio.to_thread(run_backup_cycle)
+    return {"status": "ok", "message": "Backup completed and uploaded to GCS"}
 
 
 @router.get("/auto-scan")

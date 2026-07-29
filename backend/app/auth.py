@@ -33,7 +33,7 @@ async def require_auth(
         return
 
     if not API_TOKEN and not GOOGLE_AUTH_ENABLED:
-        return
+        raise HTTPException(status_code=503, detail="Server not configured for authentication")
 
     if credentials:
         # Try API_TOKEN first
@@ -69,3 +69,8 @@ class RateLimiter:
 
 
 scanner_limiter = RateLimiter(max_calls=1, window_seconds=1800)
+price_refresh_limiter = RateLimiter(max_calls=1, window_seconds=30)
+quote_limiter = RateLimiter(max_calls=30, window_seconds=60)
+chart_limiter = RateLimiter(max_calls=20, window_seconds=60)
+nifty_refresh_limiter = RateLimiter(max_calls=1, window_seconds=600)
+token_refresh_limiter = RateLimiter(max_calls=3, window_seconds=300)
