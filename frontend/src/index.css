@@ -272,6 +272,36 @@ html {
   scroll-behavior: smooth;
 }
 
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 0%,
+    var(--shimmer-highlight, rgba(255, 255, 255, 0.06)) 50%,
+    var(--bg-elevated) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+:root {
+  --shimmer-highlight: rgba(0, 0, 0, 0.03);
+}
+
+.dark, :root:not(.light) {
+  --shimmer-highlight: rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --shimmer-highlight: rgba(255, 255, 255, 0.06);
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
@@ -377,7 +407,8 @@ html {
     animation: none !important;
   }
   .animate-pulse-subtle,
-  .animate-spin {
+  .animate-spin,
+  .shimmer {
     animation: none !important;
   }
   html {

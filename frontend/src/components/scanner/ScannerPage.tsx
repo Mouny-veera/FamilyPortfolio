@@ -619,6 +619,39 @@ export function ScannerPage() {
   const filtered = results.filter((r) => r.strategy_name === activeTab)
   const lastScan = results.length > 0 ? results[0].scanned_at : null
 
+  if (loading) {
+    return (
+      <div className="animate-page-enter">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="h-7 w-28 rounded-md shimmer" />
+            <div className="h-4 w-64 rounded mt-2 shimmer" />
+          </div>
+          <div className="h-10 w-32 rounded-lg shimmer" />
+        </div>
+        <div className="h-11 rounded-lg mb-5 shimmer" />
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border-color)" }}>
+          <div className="px-5 py-3 flex gap-6" style={{ backgroundColor: "var(--bg-elevated)" }}>
+            {[...Array(7)].map((_, i) => (
+              <div key={i} className="h-3 rounded shimmer" style={{ width: `${50 + (i % 3) * 20}px` }} />
+            ))}
+          </div>
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3.5" style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined, backgroundColor: "var(--bg-card)" }}>
+              <div className="h-4 w-8 rounded shimmer" />
+              <div className="h-4 w-24 rounded shimmer" />
+              <div className="h-4 w-14 rounded shimmer" />
+              <div className="h-4 w-14 rounded shimmer" />
+              <div className="flex-1" />
+              <div className="h-4 w-20 rounded shimmer" />
+              <div className="h-5 w-16 rounded-md shimmer" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (error && !scanning) {
     return <PageError error={error} onRetry={() => { setLoading(true); fetchResults() }} />
   }

@@ -36,25 +36,25 @@ export function DashboardPage() {
   if (loading) {
     return (
       <div className="animate-page-enter">
-        <div className="h-7 w-32 rounded-md mb-6" style={{ backgroundColor: "var(--bg-elevated)" }} />
+        <div className="h-7 w-32 rounded-md mb-6 shimmer" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="rounded-xl px-5 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
-              <div className="h-3 w-20 rounded mb-3" style={{ backgroundColor: "var(--bg-elevated)" }} />
-              <div className="h-6 w-28 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="h-3 w-20 rounded mb-3 shimmer" />
+              <div className="h-6 w-28 rounded shimmer" />
             </div>
           ))}
         </div>
         <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border-color)" }}>
           <div className="px-5 py-3" style={{ backgroundColor: "var(--bg-elevated)" }}>
-            <div className="h-4 w-32 rounded" style={{ backgroundColor: "var(--border-color)" }} />
+            <div className="h-4 w-32 rounded shimmer" />
           </div>
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-5 py-3.5" style={{ borderTop: i > 0 ? "1px solid var(--border-subtle)" : undefined }}>
-              <div className="h-4 w-24 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="h-4 w-24 rounded shimmer" />
               <div className="flex-1" />
-              <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-              <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+              <div className="h-4 w-20 rounded shimmer" />
+              <div className="h-4 w-20 rounded shimmer" />
             </div>
           ))}
         </div>

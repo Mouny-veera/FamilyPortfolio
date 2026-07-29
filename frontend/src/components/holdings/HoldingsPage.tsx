@@ -258,22 +258,22 @@ export function HoldingsPage() {
     return (
       <div className="animate-page-enter">
         <div className="flex items-center justify-between mb-6">
-          <div className="h-7 w-28 rounded-md" style={bgElevated} />
-          <div className="h-9 w-24 rounded-lg" style={bgElevated} />
+          <div className="h-7 w-28 rounded-md shimmer" />
+          <div className="h-9 w-24 rounded-lg shimmer" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="rounded-xl px-5 py-4" style={bgCardBordered}>
-              <div className="h-3 w-16 rounded mb-3" style={bgElevated} />
-              <div className="h-6 w-24 rounded" style={bgElevated} />
+              <div className="h-3 w-16 rounded mb-3 shimmer" />
+              <div className="h-6 w-24 rounded shimmer" />
             </div>
           ))}
         </div>
-        <div className="h-10 rounded-lg mb-5" style={bgSecondary} />
+        <div className="h-10 rounded-lg mb-5 shimmer" />
         {[...Array(3)].map((_, i) => (
           <div key={i} className="rounded-xl mb-3 px-4 py-4" style={bgCardBordered}>
-            <div className="h-5 w-32 rounded mb-2" style={bgElevated} />
-            <div className="h-4 w-48 rounded" style={bgElevated} />
+            <div className="h-5 w-32 rounded mb-2 shimmer" />
+            <div className="h-4 w-48 rounded shimmer" />
           </div>
         ))}
       </div>
