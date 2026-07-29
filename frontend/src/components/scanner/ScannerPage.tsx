@@ -373,6 +373,7 @@ function ColumnToggle({
               </button>
             </div>
           </div>
+          <div className="max-h-[360px] overflow-y-auto">
           {cols.map(col => {
             const isVisible = visible.has(col.id)
             const isLocked = col.id === "ticker"
@@ -397,6 +398,7 @@ function ColumnToggle({
               </button>
             )
           })}
+          </div>
         </div>
       )}
     </div>
