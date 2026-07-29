@@ -249,10 +249,12 @@ function saveColumnVisibility(strategy: StrategyKey, visible: Set<string>) {
 
 function useColumnVisibility(strategy: StrategyKey) {
   const [visible, setVisible] = useState<Set<string>>(() => loadColumnVisibility(strategy))
+  const [prevStrategy, setPrevStrategy] = useState(strategy)
 
-  useEffect(() => {
+  if (strategy !== prevStrategy) {
+    setPrevStrategy(strategy)
     setVisible(loadColumnVisibility(strategy))
-  }, [strategy])
+  }
 
   const toggle = useCallback((colId: string) => {
     setVisible(prev => {
