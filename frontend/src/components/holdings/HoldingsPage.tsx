@@ -261,8 +261,8 @@ export function HoldingsPage() {
           <div className="h-7 w-28 rounded-md shimmer" />
           <div className="h-9 w-24 rounded-lg shimmer" />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
-          {[...Array(3)].map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6">
+          {[...Array(4)].map((_, i) => (
             <div key={i} className="rounded-xl px-5 py-4" style={bgCardBordered}>
               <div className="h-3 w-16 rounded mb-3 shimmer" />
               <div className="h-6 w-24 rounded shimmer" />
