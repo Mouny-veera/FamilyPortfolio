@@ -310,7 +310,7 @@ export function HoldingsPage() {
         </button>
       </div>
 
-      <MetricCards summary={data.summary} />
+      <MetricCards summary={data.summary} alertCount={data.holdings.filter((h) => h.unrealized_pnl_pct != null && h.unrealized_pnl_pct >= 10).length} />
 
       <div
         className="flex gap-0.5 mb-5 p-0.5 rounded-lg"

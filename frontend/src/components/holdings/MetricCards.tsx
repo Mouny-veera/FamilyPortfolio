@@ -1,7 +1,8 @@
+import { AlertTriangle } from "lucide-react"
 import type { HoldingsSummary } from "@/lib/api"
 import { formatCurrency, formatPct } from "@/lib/utils"
 
-export function MetricCards({ summary }: { summary: HoldingsSummary }) {
+export function MetricCards({ summary, alertCount = 0 }: { summary: HoldingsSummary; alertCount?: number }) {
   const cards = [
     {
       label: "Invested",
@@ -40,10 +41,18 @@ export function MetricCards({ summary }: { summary: HoldingsSummary }) {
             : "var(--loss-15)"
           : "var(--border-color)",
     },
+    {
+      label: "Active Alerts",
+      value: alertCount.toString(),
+      sub: null,
+      isCount: true,
+      gradient: "var(--warning-gradient-06)",
+      borderAccent: "var(--warning-12)",
+    },
   ]
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6">
       {cards.map((card) => (
         <div
           key={card.label}
@@ -55,12 +64,17 @@ export function MetricCards({ summary }: { summary: HoldingsSummary }) {
             boxShadow: "var(--shadow-card)",
           }}
         >
-          <p
-            className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] mb-1 sm:mb-2"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {card.label}
-          </p>
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <p
+              className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em]"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {card.label}
+            </p>
+            {card.isCount && (
+              <AlertTriangle size={14} strokeWidth={2} style={{ color: "var(--color-warning)" }} />
+            )}
+          </div>
           <p
             className="text-[13px] sm:text-[22px] font-semibold font-mono tracking-tight tabular-nums"
             style={{ color: card.color || "var(--text-primary)" }}
