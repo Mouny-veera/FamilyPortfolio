@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import async_session
 from ..models import NseStock, Lot
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 FYERS_SYMBOLS_URL = "https://public.fyers.in/sym_details/NSE_CM.csv"
 
@@ -161,7 +164,7 @@ async def _load_cache_from_db():
                 {"symbol": r.symbol, "company_name": r.company_name, "isin": r.isin, "series": r.series}
                 for r in rows
             ])
-            print(f"Stock cache: loaded {len(rows)} stocks from DB")
+            logger.info("Stock cache: loaded %s stocks from DB", len(rows))
 
 
 def _parse_fyers_csv(text: str) -> list[dict]:
@@ -213,7 +216,7 @@ async def fetch_nse_master_list() -> list[dict]:
         if not stocks:
             raise ValueError("No tradeable stocks found in Fyers symbols CSV")
 
-        print(f"Fyers symbols: parsed {len(stocks)} stocks")
+        logger.info("Fyers symbols: parsed %s stocks", len(stocks))
         return stocks
 
 
@@ -238,10 +241,10 @@ async def refresh_nse_master_list() -> dict:
                     ))
 
         _cache.load(stocks)
-        print(f"Stock master list: loaded {len(stocks)} stocks from Fyers")
+        logger.info("Stock master list: loaded %s stocks from Fyers", len(stocks))
         return {"status": "ok", "count": len(stocks)}
     except Exception as e:
-        print(f"Stock master list fetch error: {e}")
+        logger.error("Stock master list fetch error: %s", e)
         await _load_cache_from_db()
         return {"status": "error", "error": str(e)}
 

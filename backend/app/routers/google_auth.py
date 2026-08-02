@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import secrets
@@ -28,22 +27,11 @@ if not JWT_SECRET:
         SECRET_FILE.write_text(JWT_SECRET)
         logger.warning("Generated and persisted JWT_SECRET to %s", SECRET_FILE)
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
-CONFIG_PATH = DATA_DIR / "config.json"
-
-
-def _load_config() -> dict:
-    if CONFIG_PATH.exists():
-        return json.loads(CONFIG_PATH.read_text())
-    return {}
-
-
-def _save_config(config: dict):
-    CONFIG_PATH.write_text(json.dumps(config, indent=2))
+from ..services.market_data import load_config
 
 
 def get_allowed_emails() -> list[str]:
-    config = _load_config()
+    config = load_config()
     return [e.lower() for e in config.get("allowed_emails", [])]
 
 

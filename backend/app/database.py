@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -5,6 +6,8 @@ from pathlib import Path
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+
+logger = logging.getLogger(__name__)
 
 DB_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,7 +39,7 @@ def backup_database(max_backups: int = 10):
     src_conn.backup(dst_conn)
     dst_conn.close()
     src_conn.close()
-    print(f"Database backup: {dest.name}")
+    logger.info("Database backup: %s", dest.name)
 
     backups = sorted(BACKUP_DIR.glob("portfolio_*.db"), key=lambda p: p.stat().st_mtime)
     while len(backups) > max_backups:
@@ -57,12 +60,12 @@ async def _migrate_add_columns(conn):
     for table, column, col_type in migrations:
         try:
             await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
-            print(f"[Migration] Added {table}.{column}")
+            logger.info("[Migration] Added %s.%s", table, column)
         except Exception as e:
             if "duplicate column" in str(e).lower() or "already exists" in str(e).lower():
                 pass
             else:
-                print(f"[Migration] UNEXPECTED ERROR adding {table}.{column}: {e}")
+                logger.error("[Migration] UNEXPECTED ERROR adding %s.%s: %s", table, column, e)
                 raise
 
 

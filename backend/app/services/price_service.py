@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import select
@@ -6,6 +7,8 @@ from sqlalchemy import select
 from ..database import async_session
 from ..models import Lot, PriceCache
 from .market_data import get_active_provider, load_config
+
+logger = logging.getLogger(__name__)
 
 _polling_task: asyncio.Task | None = None
 _scan_task: asyncio.Task | None = None
@@ -67,11 +70,10 @@ async def _polling_loop():
                     _consecutive_failures += 1
             except Exception:
                 _consecutive_failures += 1
-                import traceback
-                traceback.print_exc()
+                logger.exception("Price refresh failed")
 
             if _consecutive_failures >= 2 and _has_fyers_auto_login():
-                print(f"Price refresh failed {_consecutive_failures} times, attempting Fyers token refresh...")
+                logger.warning("Price refresh failed %d times, attempting Fyers token refresh...", _consecutive_failures)
                 try:
                     from .fyers_auth import ensure_valid_token
                     refreshed = await ensure_valid_token()
@@ -79,13 +81,13 @@ async def _polling_loop():
                         _consecutive_failures = 0
                         result = await refresh_prices()
                         if result.get("updated", 0) > 0:
-                            print(f"Token refresh succeeded, updated {result['updated']} prices")
+                            logger.info("Token refresh succeeded, updated %d prices", result['updated'])
                         else:
-                            print("Token refreshed but price fetch still returned 0")
+                            logger.warning("Token refreshed but price fetch still returned 0")
                     else:
-                        print("Fyers token refresh failed — will retry next cycle")
+                        logger.warning("Fyers token refresh failed — will retry next cycle")
                 except Exception as e:
-                    print(f"Token refresh error: {e}")
+                    logger.error("Token refresh error: %s", e)
         await asyncio.sleep(60)
 
 
@@ -95,9 +97,9 @@ async def _scan_loop():
             try:
                 from ..scanner.engine import run_scan
                 results = await run_scan()
-                print(f"Auto-scan completed: {len(results)} results")
+                logger.info("Auto-scan completed: %d results", len(results))
             except Exception as e:
-                print(f"Auto-scan error: {e}")
+                logger.error("Auto-scan error: %s", e)
         await asyncio.sleep(3600)
 
 

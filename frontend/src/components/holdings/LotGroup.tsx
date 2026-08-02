@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Fragment } from "react"
+import { useState, useRef, useEffect, useCallback, Fragment, memo } from "react"
 import { useNavigate } from "react-router-dom"
 import { ChevronRight, TrendingUp, CheckCircle2, AlertTriangle, Search, Trash2, BarChart3 } from "lucide-react"
 import type { LotGroup as LotGroupType, NseSearchResult } from "@/lib/api"
@@ -160,7 +160,7 @@ interface LotGroupProps {
   onRefresh: () => void
 }
 
-export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
+export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(true)
   const [sellingLotId, setSellingLotId] = useState<number | null>(null)
@@ -210,17 +210,6 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
           <span className="font-semibold text-[13px] tracking-tight" style={textPrimary}>
             {group.ticker}
           </span>
-          <span
-            role="link"
-            tabIndex={0}
-            onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(`/stock/${group.ticker}`) } }}
-            className="shrink-0 cursor-pointer transition-colors"
-            style={colorAccent}
-            aria-label={`View ${group.ticker} chart`}
-          >
-            <BarChart3 size={13} strokeWidth={2} />
-          </span>
           {group.mapping_status === "verified" && (
             <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
           )}
@@ -256,6 +245,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
               ≥10% Profit
             </span>
           )}
+        </button>
+        <button
+          onClick={() => navigate(`/stock/${group.ticker}`)}
+          className="shrink-0 p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center cursor-pointer transition-colors rounded-md"
+          style={colorAccent}
+          aria-label={`View ${group.ticker} chart`}
+        >
+          <BarChart3 size={13} strokeWidth={2} />
         </button>
         <div className="flex items-center gap-6 text-right shrink-0">
           <div>
@@ -350,17 +347,6 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
             <span className="font-semibold text-sm tracking-tight truncate" style={textPrimary}>
               {group.ticker}
             </span>
-            <span
-              role="link"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(`/stock/${group.ticker}`) } }}
-              className="shrink-0 cursor-pointer transition-colors"
-              style={colorAccent}
-              aria-label={`View ${group.ticker} chart`}
-            >
-              <BarChart3 size={13} strokeWidth={2} />
-            </span>
             {group.mapping_status === "verified" && (
               <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
             )}
@@ -373,6 +359,14 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
                 Unmatched
               </span>
             )}
+          </button>
+          <button
+            onClick={() => navigate(`/stock/${group.ticker}`)}
+            className="shrink-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors rounded-md"
+            style={colorAccent}
+            aria-label={`View ${group.ticker} chart`}
+          >
+            <BarChart3 size={13} strokeWidth={2} />
           </button>
 
           <button
@@ -580,4 +574,4 @@ export function LotGroup({ group, memberId, onRefresh }: LotGroupProps) {
       )}
     </div>
   )
-}
+})

@@ -3,6 +3,9 @@ from datetime import datetime, time, timedelta, timezone
 
 from .market_data import load_config, save_config
 
+import logging
+logger = logging.getLogger(__name__)
+
 IST = timezone(timedelta(hours=5, minutes=30))
 SCAN_TIME = time(15, 45)
 
@@ -67,13 +70,13 @@ async def _run_scheduled_scan():
     last = config.get("auto_scan", {}).get("last_auto_scan")
     today = datetime.now(IST).strftime("%Y-%m-%d")
     if last == today:
-        print(f"[AutoScan] Already ran today ({today}), skipping")
+        logger.warning("[AutoScan] Already ran today (%s), skipping", today)
         return
 
-    print(f"[AutoScan] Starting scheduled scan at {datetime.now(IST).strftime('%H:%M IST')}")
+    logger.info("[AutoScan] Starting scheduled scan at %s", datetime.now(IST).strftime('%H:%M'))
     try:
         results = await run_scan()
-        print(f"[AutoScan] Completed — {len(results)} results")
+        logger.info("[AutoScan] Completed — %s results", len(results))
 
         config = load_config()
         if "auto_scan" not in config:
@@ -81,9 +84,9 @@ async def _run_scheduled_scan():
         config["auto_scan"]["last_auto_scan"] = today
         save_config(config)
     except RuntimeError as e:
-        print(f"[AutoScan] Skipped — {e}")
+        logger.info("[AutoScan] Skipped — %s", e)
     except Exception as e:
-        print(f"[AutoScan] Error — {e}")
+        logger.error("[AutoScan] Error — %s", e)
 
 
 async def _scheduler_loop():
@@ -95,7 +98,7 @@ async def _scheduler_loop():
         delay = _seconds_until_next_scan()
         now = datetime.now(IST)
         target = _next_scan_datetime()
-        print(f"[AutoScan] Next scan at {target.strftime('%Y-%m-%d %H:%M IST')} ({delay/3600:.1f}h from now)")
+        logger.info("[AutoScan] Next scan at %s (%.1fh from now)", target.strftime('%Y-%m-%d %H:%M'), delay / 3600)
 
         await asyncio.sleep(delay)
 
@@ -112,7 +115,7 @@ def _on_scheduler_done(t: asyncio.Task):
         return
     exc = t.exception()
     if exc:
-        print(f"[AutoScan] Scheduler crashed: {exc}, restarting in 30s...")
+        logger.error("[AutoScan] Scheduler crashed: %s, restarting in 30s...", exc)
         loop = asyncio.get_event_loop()
         loop.call_later(30, start_scan_scheduler)
 
@@ -123,7 +126,7 @@ def start_scan_scheduler():
         return
     _scheduler_task = asyncio.create_task(_scheduler_loop())
     _scheduler_task.add_done_callback(_on_scheduler_done)
-    print("[AutoScan] Scheduler started")
+    logger.info("[AutoScan] Scheduler started")
 
 
 def stop_scan_scheduler():
@@ -131,4 +134,4 @@ def stop_scan_scheduler():
     if _scheduler_task is not None:
         _scheduler_task.cancel()
         _scheduler_task = None
-        print("[AutoScan] Scheduler stopped")
+        logger.info("[AutoScan] Scheduler stopped")

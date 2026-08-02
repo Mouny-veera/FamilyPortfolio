@@ -13,6 +13,9 @@ from urllib.parse import urlparse, parse_qs
 
 from .fyers_auth import exchange_auth_code
 
+import logging
+logger = logging.getLogger(__name__)
+
 _server = None
 
 
@@ -74,7 +77,7 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         self.wfile.write(html.encode())
 
     def log_message(self, format, *args):
-        print(f"[Fyers callback] {args[0]}")
+        logger.info("[Fyers callback] %s", args[0])
 
 
 async def start_callback_server(port: int = 8901):
@@ -87,9 +90,9 @@ async def start_callback_server(port: int = 8901):
         _server = HTTPServer(("127.0.0.1", port), _CallbackHandler)
         thread = threading.Thread(target=_server.serve_forever, daemon=True)
         thread.start()
-        print(f"Fyers callback listener started on port {port}")
+        logger.info("Fyers callback listener started on port %s", port)
     except OSError as e:
-        print(f"Could not start Fyers callback listener on port {port}: {e}")
+        logger.info("Could not start Fyers callback listener on port %s: %s", port, e)
 
 
 async def stop_callback_server():
@@ -97,4 +100,4 @@ async def stop_callback_server():
     if _server:
         _server.shutdown()
         _server = None
-        print("Fyers callback listener stopped")
+        logger.info("Fyers callback listener stopped")

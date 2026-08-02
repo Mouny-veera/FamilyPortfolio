@@ -4,6 +4,9 @@ import subprocess
 from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 IST = timezone(timedelta(hours=5, minutes=30))
 GCS_BUCKET = "gs://familyportfolio-backups"
 
@@ -27,7 +30,7 @@ def _local_backup() -> Path | None:
     src_conn.backup(dst_conn)
     dst_conn.close()
     src_conn.close()
-    print(f"[Backup] Local backup: {dest.name}")
+    logger.info("[Backup] Local backup: %s", dest.name)
     return dest
 
 
@@ -39,19 +42,19 @@ def _upload_to_gcs(local_path: Path) -> bool:
             capture_output=True, text=True, timeout=120,
         )
         if result.returncode == 0:
-            print(f"[Backup] Uploaded to GCS: {gcs_path}")
+            logger.info("[Backup] Uploaded to GCS: %s", gcs_path)
             return True
         else:
-            print(f"[Backup] GCS upload failed: {result.stderr.strip()}")
+            logger.error("[Backup] GCS upload failed: %s", result.stderr.strip())
             return False
     except FileNotFoundError:
-        print("[Backup] gsutil not found — skipping GCS upload")
+        logger.warning("[Backup] gsutil not found — skipping GCS upload")
         return False
     except subprocess.TimeoutExpired:
-        print("[Backup] GCS upload timed out")
+        logger.info("[Backup] GCS upload timed out")
         return False
     except Exception as e:
-        print(f"[Backup] GCS upload error: {e}")
+        logger.error("[Backup] GCS upload error: %s", e)
         return False
 
 
@@ -78,9 +81,9 @@ def _cleanup_gcs(max_remote: int = 20):
         to_delete = files[:len(files) - max_remote]
         for f in to_delete:
             subprocess.run(["gsutil", "rm", f], capture_output=True, timeout=30)
-            print(f"[Backup] Removed old GCS backup: {f.split('/')[-1]}")
+            logger.info("[Backup] Removed old GCS backup: %s", f.split('/')[-1])
     except Exception as e:
-        print(f"[Backup] GCS cleanup error: {e}")
+        logger.error("[Backup] GCS cleanup error: %s", e)
 
 
 def _cleanup_local(max_local: int = 10):
@@ -88,7 +91,7 @@ def _cleanup_local(max_local: int = 10):
     while len(backups) > max_local:
         old = backups.pop(0)
         old.unlink()
-        print(f"[Backup] Removed old local backup: {old.name}")
+        logger.info("[Backup] Removed old local backup: %s", old.name)
 
 
 def run_backup_cycle():
@@ -114,14 +117,14 @@ def _next_backup_datetime() -> datetime:
 
 async def _scheduler_loop():
     await asyncio.sleep(10)
-    print("[Backup] Running startup backup...")
+    logger.info("[Backup] Running startup backup...")
     await asyncio.to_thread(run_backup_cycle)
 
     while True:
         target = _next_backup_datetime()
         now = datetime.now(IST)
         delay = (target - now).total_seconds()
-        print(f"[Backup] Next backup at {target.strftime('%Y-%m-%d %H:%M IST')} ({delay/3600:.1f}h)")
+        logger.info("[Backup] Next backup at %s (%.1fh)", target.strftime('%Y-%m-%d %H:%M'), delay / 3600)
 
         await asyncio.sleep(delay)
         await asyncio.to_thread(run_backup_cycle)
@@ -134,7 +137,7 @@ def _on_scheduler_done(t: asyncio.Task):
         return
     exc = t.exception()
     if exc:
-        print(f"[Backup] Scheduler crashed: {exc}, restarting in 30s...")
+        logger.error("[Backup] Scheduler crashed: %s, restarting in 30s...", exc)
         loop = asyncio.get_event_loop()
         loop.call_later(30, start_backup_scheduler)
 
@@ -145,7 +148,7 @@ def start_backup_scheduler():
         return
     _scheduler_task = asyncio.create_task(_scheduler_loop())
     _scheduler_task.add_done_callback(_on_scheduler_done)
-    print("[Backup] Scheduler started (4x daily + GCS upload)")
+    logger.info("[Backup] Scheduler started (4x daily + GCS upload)")
 
 
 def stop_backup_scheduler():
@@ -153,4 +156,4 @@ def stop_backup_scheduler():
     if _scheduler_task is not None:
         _scheduler_task.cancel()
         _scheduler_task = None
-        print("[Backup] Scheduler stopped")
+        logger.info("[Backup] Scheduler stopped")

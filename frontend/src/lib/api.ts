@@ -10,8 +10,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers["Authorization"] = `Bearer ${stored.token}`
   }
   const res = await fetch(`${BASE}${path}`, {
-    headers,
     ...options,
+    headers: { ...headers, ...(options?.headers as Record<string, string>) },
   })
   if (!res.ok) {
     if (res.status === 401 && path !== "/auth/google") {

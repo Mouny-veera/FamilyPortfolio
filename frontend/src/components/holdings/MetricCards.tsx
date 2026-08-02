@@ -1,9 +1,10 @@
+import { memo } from "react"
 import { useNavigate } from "react-router-dom"
 import { AlertTriangle } from "lucide-react"
 import type { HoldingsSummary } from "@/lib/api"
 import { formatCurrency, formatPct } from "@/lib/utils"
 
-export function MetricCards({ summary, alertCount = 0 }: { summary: HoldingsSummary; alertCount?: number }) {
+export const MetricCards = memo(function MetricCards({ summary, alertCount = 0 }: { summary: HoldingsSummary; alertCount?: number }) {
   const navigate = useNavigate()
 
   const cards = [
@@ -110,4 +111,4 @@ export function MetricCards({ summary, alertCount = 0 }: { summary: HoldingsSumm
       })}
     </div>
   )
-}
+})

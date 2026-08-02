@@ -6,6 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..models import Member, Lot, RealizedPnL, PriceCache, ScanResult, derive_financial_year
+import logging
+
+logger = logging.getLogger(__name__)
+
 from ..schemas import (
     BuyRequest, EditLotRequest, SellRequest, SellGroupRequest, LotOut, LotGroupOut,
     RealizedPnLOut, MemberHoldingsOut, HoldingsSummary, MemberOut, NseSuggestion,
@@ -110,7 +114,7 @@ async def sell_lot(req: SellRequest, db: AsyncSession = Depends(get_db)):
     async with _sell_locks[req.lot_id]:
         async with db.begin():
             lot_result = await db.execute(
-                select(Lot).where(Lot.id == req.lot_id).with_for_update()
+                select(Lot).where(Lot.id == req.lot_id)
             )
             lot = lot_result.scalar_one_or_none()
             if not lot:
@@ -156,6 +160,7 @@ async def sell_lot(req: SellRequest, db: AsyncSession = Depends(get_db)):
             await db.flush()
             await db.refresh(pnl)
 
+    _sell_locks.pop(req.lot_id, None)
     return pnl
 
 
@@ -170,7 +175,6 @@ async def sell_group(req: SellGroupRequest, db: AsyncSession = Depends(get_db)):
         lots_result = await db.execute(
             select(Lot)
             .where(Lot.member_id == req.member_id, Lot.ticker == ticker)
-            .with_for_update()
             .order_by(Lot.buy_date)
         )
         lots = lots_result.scalars().all()
@@ -351,7 +355,7 @@ async def delete_lot(lot_id: int, db: AsyncSession = Depends(get_db)):
         "lot_label": lot.lot_label,
         "buy_date": str(lot.buy_date),
     }
-    print(f"LOT DELETED: {deleted_info}")
+    logger.info("LOT DELETED: %s", deleted_info)
     await db.delete(lot)
     await db.commit()
     return {"status": "deleted", "deleted_lot": deleted_info}

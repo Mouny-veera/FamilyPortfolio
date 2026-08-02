@@ -16,6 +16,9 @@ from dotenv import load_dotenv
 
 from .market_data import load_config, save_config
 
+import logging
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 FYERS_APP_ID = os.environ.get("FYERS_APP_ID", "")
@@ -185,19 +188,19 @@ async def is_token_valid() -> bool:
 
 async def ensure_valid_token():
     if await is_token_valid():
-        print("Fyers token is valid")
+        logger.info("Fyers token is valid")
         return True
 
     config = load_config()
     if not config.get("fyers", {}).get("totp_secret"):
-        print("Fyers auto-login not configured (no totp_secret)")
+        logger.info("Fyers auto-login not configured (no totp_secret)")
         return False
 
-    print("Fyers token expired, auto-refreshing...")
+    logger.info("Fyers token expired, auto-refreshing...")
     result = await generate_fyers_token()
     if result["status"] == "ok":
-        print(f"Fyers token refreshed: {result['message']}")
+        logger.info("Fyers token refreshed: %s", result['message'])
         return True
     else:
-        print(f"Fyers token refresh failed: {result['message']}")
+        logger.error("Fyers token refresh failed: %s", result['message'])
         return False

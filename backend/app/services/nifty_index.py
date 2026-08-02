@@ -7,6 +7,9 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 NIFTY500_FILE = DATA_DIR / "nifty500.json"
 LEGACY_FILE = DATA_DIR / "nifty200.json"
@@ -39,7 +42,7 @@ def _fetch_from_nse() -> list[str]:
             if len(symbols) >= 400:
                 return symbols
         except Exception as e:
-            print(f"[Nifty500] Fetch failed from {url}: {e}")
+            logger.error("[Nifty500] Fetch failed from %s: %s", url, e)
     return []
 
 
@@ -67,12 +70,12 @@ async def refresh_nifty_universe() -> dict:
     if not symbols:
         cached = load_nifty_universe()
         if cached:
-            print(f"[Nifty500] Live fetch failed, using cached list ({len(cached)} stocks)")
+            logger.error("[Nifty500] Live fetch failed, using cached list (%s stocks)", len(cached))
             return {"status": "cached", "count": len(cached)}
         return {"status": "error", "count": 0, "message": "No data available"}
 
     _save_list(symbols)
-    print(f"[Nifty500] Updated to {len(symbols)} stocks from NSE")
+    logger.info("[Nifty500] Updated to %s stocks from NSE", len(symbols))
     return {"status": "ok", "count": len(symbols)}
 
 

@@ -21,6 +21,9 @@ from .high52w_strategy import High52WStrategy
 from .low52w_strategy import Low52WStrategy
 from .composite import compute_composite
 
+import logging
+logger = logging.getLogger(__name__)
+
 STRATEGIES: list[BaseStrategy] = [
     FibonacciRetracementStrategy(),
     PivotPointStrategy(),
@@ -46,7 +49,7 @@ async def run_scan() -> list[dict]:
         try:
             await refresh_nifty_universe()
         except Exception as e:
-            print(f"[Scanner] Nifty 500 refresh failed, using cached: {e}")
+            logger.error("[Scanner] Nifty 500 refresh failed, using cached: %s", e)
         universe = load_nifty_universe()
         if not universe:
             raise RuntimeError("Scanner universe is empty — check data/nifty500.json")
@@ -83,7 +86,7 @@ async def run_scan() -> list[dict]:
                             })
                             ticker_scores[strategy.name] = scan_score.score
                     except Exception as e:
-                        print(f"Scanner {strategy.name} error for {ticker}: {e}")
+                        logger.error("Scanner %s error for %s: %s", strategy.name, ticker, e)
 
                 # Compute composite if we have enough strategy data
                 if len(ticker_scores) >= 3:
@@ -101,17 +104,17 @@ async def run_scan() -> list[dict]:
                     })
             except Exception as e:
                 errors += 1
-                print(f"Scanner fetch error for {ticker}: {e}")
+                logger.error("Scanner fetch error for %s: %s", ticker, e)
             await asyncio.sleep(0.3)
 
         results.extend(composite_results)
 
         success_rate = (len(universe) - errors) / len(universe) if universe else 0
         if success_rate < 0.5 and results:
-            print(f"Scan had {errors}/{len(universe)} failures ({success_rate:.0%} success) — keeping previous results")
+            logger.error("Scan had %s/%s failures (%.0%% success) — keeping previous results", errors, len(universe), success_rate)
             return results
         if not results and errors > 0:
-            print(f"Scan produced 0 results with {errors} errors — keeping previous results")
+            logger.error("Scan produced 0 results with %s errors — keeping previous results", errors)
             return []
 
         async with async_session() as db:

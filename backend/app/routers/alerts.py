@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,15 +19,15 @@ async def get_alerts(db: AsyncSession = Depends(get_db)):
 
     price_map = await load_price_map(db)
 
+    all_lots_result = await db.execute(select(Lot).order_by(Lot.ticker, Lot.buy_date))
+    lots_by_member: dict[int, list[Lot]] = defaultdict(list)
+    for lot in all_lots_result.scalars().all():
+        lots_by_member[lot.member_id].append(lot)
+
     alerts = []
 
     for member in members:
-        lots_result = await db.execute(
-            select(Lot)
-            .where(Lot.member_id == member.id)
-            .order_by(Lot.ticker, Lot.buy_date)
-        )
-        lots = lots_result.scalars().all()
+        lots = lots_by_member.get(member.id, [])
 
         for ticker, ticker_lots in group_lots_by_ticker(lots).items():
             pnl = compute_ticker_pnl(ticker, ticker_lots, price_map.get(ticker))

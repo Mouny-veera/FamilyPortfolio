@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -7,6 +8,13 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import require_auth
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 from .database import init_db, async_session
 from .models import Member
 from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth, stocks, fundamentals
@@ -19,15 +27,12 @@ from .services.fundamentals_scheduler import start_fundamentals_scheduler, stop_
 from .services.backup_scheduler import start_backup_scheduler, stop_backup_scheduler
 from .services.nifty_index import refresh_nifty200
 
-FAMILY_MEMBERS = ["Veerakumar", "Sneeha", "Mouny", "Manikandan", "Devi"]
-
-
 async def seed_members():
     from sqlalchemy import select
     async with async_session() as db:
         result = await db.execute(select(Member))
         if result.scalars().first() is None:
-            for name in FAMILY_MEMBERS:
+            for name in ["Veerakumar", "Sneeha", "Mouny", "Manikandan", "Devi"]:
                 db.add(Member(name=name))
             await db.commit()
 
@@ -72,8 +77,7 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    import traceback
-    traceback.print_exc()
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(status_code=500, content={"detail": "An internal error occurred"})
 
 

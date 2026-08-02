@@ -3,6 +3,9 @@ from datetime import datetime, time, timedelta, timezone
 
 from .fundamentals import refresh_all_fundamentals, is_data_stale
 
+import logging
+logger = logging.getLogger(__name__)
+
 IST = timezone(timedelta(hours=5, minutes=30))
 FETCH_TIME = time(6, 0)
 
@@ -21,12 +24,12 @@ async def _run_if_stale():
     try:
         stale = await is_data_stale()
         if stale:
-            print("[Fundamentals] Data is stale, fetching on startup...")
+            logger.info("[Fundamentals] Data is stale, fetching on startup...")
             await refresh_all_fundamentals()
         else:
-            print("[Fundamentals] Data is fresh, skipping startup fetch")
+            logger.warning("[Fundamentals] Data is fresh, skipping startup fetch")
     except Exception as e:
-        print(f"[Fundamentals] Startup check error: {e}")
+        logger.error("[Fundamentals] Startup check error: %s", e)
 
 
 async def _scheduler_loop():
@@ -37,15 +40,15 @@ async def _scheduler_loop():
         target = _next_fetch_datetime()
         now = datetime.now(IST)
         delay = (target - now).total_seconds()
-        print(f"[Fundamentals] Next fetch at {target.strftime('%Y-%m-%d %H:%M IST')} ({delay/3600:.1f}h)")
+        logger.info("[Fundamentals] Next fetch at %s (%.1fh)", target.strftime('%Y-%m-%d %H:%M'), delay / 3600)
 
         await asyncio.sleep(delay)
-        print(f"[Fundamentals] Starting scheduled fetch at {datetime.now(IST).strftime('%H:%M IST')}")
+        logger.info("[Fundamentals] Starting scheduled fetch at %s", datetime.now(IST).strftime('%H:%M'))
 
         try:
             await refresh_all_fundamentals()
         except Exception as e:
-            print(f"[Fundamentals] Scheduled fetch error: {e}")
+            logger.error("[Fundamentals] Scheduled fetch error: %s", e)
 
         await asyncio.sleep(60)
 
@@ -56,7 +59,7 @@ def _on_scheduler_done(t: asyncio.Task):
         return
     exc = t.exception()
     if exc:
-        print(f"[Fundamentals] Scheduler crashed: {exc}, restarting in 30s...")
+        logger.error("[Fundamentals] Scheduler crashed: %s, restarting in 30s...", exc)
         loop = asyncio.get_event_loop()
         loop.call_later(30, start_fundamentals_scheduler)
 
@@ -67,7 +70,7 @@ def start_fundamentals_scheduler():
         return
     _scheduler_task = asyncio.create_task(_scheduler_loop())
     _scheduler_task.add_done_callback(_on_scheduler_done)
-    print("[Fundamentals] Scheduler started")
+    logger.info("[Fundamentals] Scheduler started")
 
 
 def stop_fundamentals_scheduler():
@@ -75,4 +78,4 @@ def stop_fundamentals_scheduler():
     if _scheduler_task is not None:
         _scheduler_task.cancel()
         _scheduler_task = None
-        print("[Fundamentals] Scheduler stopped")
+        logger.info("[Fundamentals] Scheduler stopped")

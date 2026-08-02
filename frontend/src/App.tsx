@@ -4,6 +4,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { TopBar } from "@/components/layout/TopBar"
 import { LoginPage } from "@/components/auth/LoginPage"
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { usePolling } from "@/hooks/usePolling"
 import { api } from "@/lib/api"
 import {
@@ -85,29 +86,31 @@ function AuthenticatedApp() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar lastRefresh={lastRefresh} onMenuToggle={() => setSidebarOpen(true)} />
         <main id="main-content" className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <Suspense fallback={
-            <div className="animate-page-enter py-8">
-              <div className="h-7 w-32 rounded-md mb-6" style={{ backgroundColor: "var(--bg-elevated)" }} />
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="rounded-xl px-5 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
-                    <div className="h-3 w-20 rounded mb-3" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                    <div className="h-6 w-28 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                  </div>
-                ))}
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="animate-page-enter py-8">
+                <div className="h-7 w-32 rounded-md mb-6" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="rounded-xl px-5 py-4" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
+                      <div className="h-3 w-20 rounded mb-3" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                      <div className="h-6 w-28 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          }>
-            <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/holdings/:memberId" element={<HoldingsPage />} />
-              <Route path="/scanner" element={<ScannerPage />} />
-              <Route path="/alerts" element={<AlertsPage />} />
-              <Route path="/stock/:ticker" element={<StockDetailPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+            }>
+              <Routes>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/holdings/:memberId" element={<HoldingsPage />} />
+                <Route path="/scanner" element={<ScannerPage />} />
+                <Route path="/alerts" element={<AlertsPage />} />
+                <Route path="/stock/:ticker" element={<StockDetailPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

@@ -8,6 +8,9 @@ from ..database import async_session
 from ..models import StockFundamentals
 from .nifty_index import load_nifty_universe
 
+import logging
+logger = logging.getLogger(__name__)
+
 IST = timezone(timedelta(hours=5, minutes=30))
 
 MAX_RETRIES = 2
@@ -83,7 +86,7 @@ def _fetch_bse_single(ticker: str) -> dict | None:
         bse_isin = meta.get("ISIN", "").strip()
         nse_isin = get_nse_isin(ticker)
         if bse_isin and nse_isin and bse_isin != nse_isin:
-            print(f"[Fundamentals] ISIN mismatch for {ticker}: NSE={nse_isin}, BSE={bse_isin} — skipping BSE data")
+            logger.warning("[Fundamentals] ISIN mismatch for %s: NSE=%s, BSE=%s — skipping BSE data", ticker, nse_isin, bse_isin)
             return None
 
         con_pe = _sanitize(meta.get("ConPE"))
@@ -195,7 +198,7 @@ async def fetch_fundamentals_for_ticker(ticker: str) -> dict | None:
             _fetch_status["yf_fallbacks"] = _fetch_status.get("yf_fallbacks", 0) + 1
             return result
     except Exception as e:
-        print(f"[Fundamentals] Both BSE and yfinance failed for {ticker}: {e}")
+        logger.error("[Fundamentals] Both BSE and yfinance failed for %s: %s", ticker, e)
 
     return None
 
@@ -245,7 +248,7 @@ async def refresh_all_fundamentals() -> dict:
             except Exception as e:
                 errors += 1
                 _fetch_status["last_error"] = f"{ticker}: {e}"
-                print(f"[Fundamentals] Error saving {ticker}: {e}")
+                logger.error("[Fundamentals] Error saving %s: %s", ticker, e)
 
             await asyncio.sleep(DELAY_BETWEEN_CALLS)
 
@@ -255,8 +258,8 @@ async def refresh_all_fundamentals() -> dict:
 
         bse_hits = _fetch_status["bse_hits"]
         yf_fb = _fetch_status["yf_fallbacks"]
-        print(f"[Fundamentals] Completed: {fetched}/{len(universe)} fetched "
-              f"(BSE: {bse_hits}, yfinance fallback: {yf_fb}), {errors} errors")
+        logger.info("[Fundamentals] Completed: %d/%d fetched (BSE: %d, yfinance fallback: %d), %d errors",
+                    fetched, len(universe), bse_hits, yf_fb, errors)
         return {
             "status": "ok", "fetched": fetched, "errors": errors,
             "total": len(universe), "bse_hits": bse_hits, "yf_fallbacks": yf_fb,

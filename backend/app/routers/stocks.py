@@ -7,6 +7,9 @@ from fastapi import APIRouter, HTTPException, Query
 from ..auth import quote_limiter, chart_limiter
 from ..services.market_data import get_active_provider
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
 RESOLUTION_MAP = {
@@ -64,12 +67,12 @@ async def get_stock_chart(
                 if clean:
                     return {"candles": clean, "resolution": resolution}
         except Exception as e:
-            print(f"Fyers intraday error for {ticker}: {e}")
+            logger.error("Fyers intraday error for %s: %s", ticker, e)
 
     try:
         ohlc = await provider.get_historical_ohlc(ticker, start, end)
     except Exception as e:
-        print(f"Chart historical OHLC error for {ticker}: {e}")
+        logger.error("Chart historical OHLC error for %s: %s", ticker, e)
         traceback.print_exc()
         ohlc = None
 
@@ -90,7 +93,7 @@ async def get_stock_chart(
                     "Close": "close", "Volume": "volume",
                 })
         except Exception as e:
-            print(f"yfinance chart fallback error for {ticker}: {e}")
+            logger.error("yfinance chart fallback error for %s: %s", ticker, e)
             traceback.print_exc()
 
     if ohlc is None or ohlc.empty:
@@ -120,7 +123,7 @@ async def get_stock_chart(
                 "volume": int(vol) if vol == vol else 0,
             })
     except Exception as e:
-        print(f"Chart data processing error for {ticker}: {e}")
+        logger.error("Chart data processing error for %s: %s", ticker, e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to process chart data for {ticker}")
 
@@ -159,7 +162,7 @@ async def get_stock_quote(ticker: str):
                     "low_52w": v.get("low_52w") if "low_52w" in v else None,
                 }
         except Exception as e:
-            print(f"Fyers quote error for {ticker}: {e}")
+            logger.error("Fyers quote error for %s: %s", ticker, e)
 
     # yfinance fallback
     import yfinance as yf
@@ -190,7 +193,7 @@ async def get_stock_quote(ticker: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"yfinance quote error for {ticker}: {e}")
+        logger.error("yfinance quote error for %s: %s", ticker, e)
         raise HTTPException(status_code=404, detail=f"No quote for {ticker}")
 
 
@@ -216,5 +219,5 @@ async def get_market_depth(ticker: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Fyers depth error for {ticker}: {e}")
+        logger.error("Fyers depth error for %s: %s", ticker, e)
         raise HTTPException(status_code=500, detail="Depth fetch failed")

@@ -1,9 +1,12 @@
+import logging
 from abc import ABC, abstractmethod
 from datetime import date
 import json
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "data" / "config.json"
@@ -66,7 +69,7 @@ class YFinanceProvider(MarketDataProvider):
             change = ((price - prev) / prev * 100) if prev else 0
             return {"last_price": round(price, 2), "change_pct": round(change, 2)}
         except Exception as e:
-            print(f"Live price error for {ticker}: {e}")
+            logger.error("Live price error for %s: %s", ticker, e)
             return None
 
     async def get_historical_ohlc(
@@ -87,7 +90,7 @@ class YFinanceProvider(MarketDataProvider):
             df = df.dropna(subset=["open", "high", "low", "close"])
             return df if not df.empty else None
         except Exception as e:
-            print(f"Historical OHLC error for {ticker}: {e}")
+            logger.error("Historical OHLC error for %s: %s", ticker, e)
             return None
 
     async def get_bulk_prices(self, tickers: list[str]) -> dict[str, dict[str, float]]:
@@ -115,7 +118,7 @@ class YFinanceProvider(MarketDataProvider):
                     continue
             return result
         except Exception as e:
-            print(f"yfinance bulk download error: {e}")
+            logger.error("yfinance bulk download error: %s", e)
             return {}
 
     async def get_nifty200_constituents(self) -> list[str]:
@@ -165,7 +168,7 @@ class FyersProvider(MarketDataProvider):
             chp = q.get("chp", 0)
             return {"last_price": round(float(lp), 2), "change_pct": round(float(chp), 2)}
         except Exception as e:
-            print(f"Fyers live price error for {ticker}: {e}")
+            logger.error("Fyers live price error for %s: %s", ticker, e)
             return await _get_yf_fallback().get_live_price(ticker)
 
     async def get_historical_ohlc(
@@ -192,7 +195,7 @@ class FyersProvider(MarketDataProvider):
                 return await _get_yf_fallback().get_historical_ohlc(ticker, start, end)
             return df
         except Exception as e:
-            print(f"Fyers historical OHLC error for {ticker}: {e}")
+            logger.error("Fyers historical OHLC error for %s: %s", ticker, e)
             return await _get_yf_fallback().get_historical_ohlc(ticker, start, end)
 
     async def get_bulk_prices(self, tickers: list[str]) -> dict[str, dict[str, float]]:
@@ -222,12 +225,12 @@ class FyersProvider(MarketDataProvider):
                         "change_pct": round(float(chp), 2),
                     }
             except Exception as e:
-                print(f"Fyers bulk price error (batch {i}): {e}")
+                logger.error("Fyers bulk price error (batch %s): %s", i, e)
 
         # yfinance fallback for tickers Fyers couldn't resolve
         missing = [t for t in tickers if t not in result]
         if missing:
-            print(f"Fyers missed {len(missing)} tickers, falling back to yfinance: {missing}")
+            logger.info("Fyers missed %s tickers, falling back to yfinance: %s", len(missing), missing)
             yf_prices = await _get_yf_fallback().get_bulk_prices(missing)
             result.update(yf_prices)
 
@@ -240,15 +243,27 @@ class FyersProvider(MarketDataProvider):
         return {"gainers": [], "losers": []}
 
 
+_cached_provider: MarketDataProvider | None = None
+_cached_provider_key: str | None = None
+
+
 def get_active_provider() -> MarketDataProvider:
+    global _cached_provider, _cached_provider_key
     config = load_config()
     fyers_cfg = config.get("fyers", {})
+    cache_key = f"{fyers_cfg.get('client_id')}:{(fyers_cfg.get('access_token') or '')[:20]}"
+    if _cached_provider is not None and _cached_provider_key == cache_key:
+        return _cached_provider
     if fyers_cfg.get("client_id") and fyers_cfg.get("access_token"):
         try:
-            return FyersProvider(
+            _cached_provider = FyersProvider(
                 client_id=fyers_cfg["client_id"],
                 access_token=fyers_cfg["access_token"],
             )
+            _cached_provider_key = cache_key
+            return _cached_provider
         except Exception as e:
-            print(f"Fyers init failed, falling back to yfinance: {e}")
-    return YFinanceProvider()
+            logger.warning("Fyers init failed, falling back to yfinance: %s", e)
+    _cached_provider = YFinanceProvider()
+    _cached_provider_key = cache_key
+    return _cached_provider
