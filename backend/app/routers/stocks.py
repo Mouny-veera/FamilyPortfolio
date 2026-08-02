@@ -17,8 +17,13 @@ RANGE_DAYS = {
     "6M": 180, "1Y": 365, "5Y": 1825, "ALL": 3650,
 }
 
-INTRADAY_RESOLUTION = {
-    "1D": "5", "5D": "15",
+VALID_RESOLUTIONS = {"1", "5", "15", "30", "60", "120", "D", "W", "M"}
+
+INTRADAY_RESOLUTIONS = {"1", "5", "15", "30", "60", "120"}
+
+RANGE_DEFAULT_RESOLUTION = {
+    "1D": "5", "5D": "15", "1M": "30", "3M": "60",
+    "6M": "D", "1Y": "D", "5Y": "W", "ALL": "M",
 }
 
 
@@ -43,14 +48,16 @@ def _resample_ohlcv(candles: list[dict], rule: str) -> list[dict]:
 @router.get("/{ticker}/chart")
 async def get_stock_chart(
     ticker: str,
-    resolution: str = Query("D", pattern="^(D|W|M)$"),
+    resolution: str = Query("D", pattern="^(1|5|15|30|60|120|D|W|M)$"),
     range: str = Query("6M", pattern="^(1D|5D|1M|3M|6M|1Y|5Y|ALL)$"),
 ):
     chart_limiter.check()
+    if resolution not in VALID_RESOLUTIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid resolution: {resolution}")
     days = RANGE_DAYS[range]
 
-    is_intraday = range in INTRADAY_RESOLUTION
-    fyers_resolution = INTRADAY_RESOLUTION.get(range, resolution)
+    is_intraday = resolution in INTRADAY_RESOLUTIONS
+    fyers_resolution = resolution
 
     provider = get_active_provider()
 

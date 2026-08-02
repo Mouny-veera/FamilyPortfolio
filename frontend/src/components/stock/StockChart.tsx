@@ -75,7 +75,7 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
 
-  const isIntraday = ["1", "5", "15", "60"].includes(resolution)
+  const isIntraday = ["1", "5", "15", "30", "60", "120"].includes(resolution)
 
   const buildChart = useCallback(() => {
     if (!containerRef.current || candles.length === 0) return

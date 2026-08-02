@@ -173,7 +173,7 @@ export interface StockQuote {
   low_52w: number | null
 }
 
-export type ChartResolution = "D" | "W" | "M"
+export type ChartResolution = "1" | "5" | "15" | "30" | "60" | "120" | "D" | "W" | "M"
 export type ChartRange = "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "5Y" | "ALL"
 
 export const api = {

@@ -12,11 +12,39 @@ import {
   saveIndicators,
 } from "./indicators"
 
-const RESOLUTIONS: { key: ChartResolution; label: string }[] = [
+const ALL_RESOLUTIONS: { key: ChartResolution; label: string }[] = [
+  { key: "1", label: "1m" },
+  { key: "5", label: "5m" },
+  { key: "15", label: "15m" },
+  { key: "30", label: "30m" },
+  { key: "60", label: "1h" },
+  { key: "120", label: "2h" },
   { key: "D", label: "D" },
   { key: "W", label: "W" },
   { key: "M", label: "M" },
 ]
+
+const RANGE_DEFAULT_RESOLUTION: Record<ChartRange, ChartResolution> = {
+  "1D": "5",
+  "5D": "15",
+  "1M": "30",
+  "3M": "60",
+  "6M": "D",
+  "1Y": "D",
+  "5Y": "W",
+  "ALL": "M",
+}
+
+const RANGE_ALLOWED_RESOLUTIONS: Record<ChartRange, ChartResolution[]> = {
+  "1D": ["1", "5", "15", "30"],
+  "5D": ["5", "15", "30", "60"],
+  "1M": ["15", "30", "60", "D"],
+  "3M": ["30", "60", "D"],
+  "6M": ["60", "D", "W"],
+  "1Y": ["D", "W"],
+  "5Y": ["D", "W", "M"],
+  "ALL": ["W", "M"],
+}
 
 const DATE_RANGES: { key: ChartRange; label: string }[] = [
   { key: "1D", label: "1D" },
@@ -237,7 +265,8 @@ export function StockDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeIndicators, setActiveIndicators] = useState<Set<IndicatorId>>(loadSavedIndicators)
 
-  const isIntraday = range === "1D" || range === "5D"
+  const allowedResolutions = RANGE_ALLOWED_RESOLUTIONS[range]
+  const visibleResolutions = ALL_RESOLUTIONS.filter(r => allowedResolutions.includes(r.key))
 
   const toggleIndicator = useCallback((id: IndicatorId) => {
     setActiveIndicators(prev => {
@@ -293,6 +322,8 @@ export function StockDetailPage() {
   }
 
   const handleRangeChange = (r: ChartRange) => {
+    const defaultRes = RANGE_DEFAULT_RESOLUTION[r]
+    setResolution(defaultRes)
     setRange(r)
   }
 
@@ -355,36 +386,31 @@ export function StockDetailPage() {
         {/* Chart area */}
         <div className="flex-1 min-w-0">
           {/* Controls: Resolution picker + Date range picker */}
-          <div className="flex items-center gap-3 mb-3 flex-wrap">
-            {/* Resolution picker */}
+          <div className="flex flex-col gap-2 mb-3">
+            {/* Resolution picker (dynamic based on range) */}
             <div
               className="flex items-center gap-1 p-1 rounded-lg"
               style={{ backgroundColor: "var(--bg-elevated)" }}
               role="tablist"
               aria-label="Candle resolution"
             >
-              {RESOLUTIONS.map((r) => (
+              {visibleResolutions.map((r) => (
                 <button
                   key={r.key}
                   role="tab"
-                  aria-selected={!isIntraday && resolution === r.key}
+                  aria-selected={resolution === r.key}
                   onClick={() => handleResolutionChange(r.key)}
                   className="px-3 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0"
                   style={{
-                    color: !isIntraday && resolution === r.key ? "white" : "var(--text-muted)",
-                    background: !isIntraday && resolution === r.key ? "var(--gradient-accent)" : "transparent",
-                    boxShadow: !isIntraday && resolution === r.key ? "var(--shadow-accent)" : "none",
-                    opacity: isIntraday ? 0.5 : 1,
+                    color: resolution === r.key ? "white" : "var(--text-muted)",
+                    background: resolution === r.key ? "var(--gradient-accent)" : "transparent",
+                    boxShadow: resolution === r.key ? "var(--shadow-accent)" : "none",
                   }}
-                  disabled={isIntraday}
-                  title={`Each candle = 1 ${r.key === "D" ? "day" : r.key === "W" ? "week" : "month"}`}
                 >
                   {r.label}
                 </button>
               ))}
             </div>
-
-            <div style={{ width: 1, height: 24, backgroundColor: "var(--border-color)" }} />
 
             {/* Date range picker */}
             <div
