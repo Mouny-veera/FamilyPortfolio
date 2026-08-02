@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Play, Loader2, Search, TrendingUp, TrendingDown, Minus, GripVertical, SlidersHorizontal, Check, RotateCcw } from "lucide-react"
+import { Play, Loader2, Search, TrendingUp, TrendingDown, Minus, GripVertical, SlidersHorizontal, Check, RotateCcw, ArrowUp } from "lucide-react"
 import {
   DndContext,
   closestCenter,
@@ -45,6 +45,8 @@ const bgCard = { backgroundColor: "var(--bg-card)" } as const
 const bgSecondary = { backgroundColor: "var(--bg-secondary)" } as const
 const dropdownPanel = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-elevated)" } as const
 const borderBottomSubtle = { borderBottom: "1px solid var(--border-subtle)" } as const
+const stickyTabs = { position: "sticky" as const, top: 0, zIndex: 10, backgroundColor: "var(--bg-primary)", paddingBottom: "12px", paddingTop: "4px" }
+const stickyThead = { position: "sticky" as const, top: 0, zIndex: 5, backgroundColor: "var(--bg-card)" } as const
 const accentTextTransparentBg = { color: "var(--color-accent)", backgroundColor: "transparent" } as const
 const mutedTextTransparentBg = { color: "var(--text-muted)", backgroundColor: "transparent" } as const
 const accentBadgeStrong = { backgroundColor: "var(--accent-20)", color: "var(--color-accent)" } as const
@@ -550,6 +552,29 @@ export function ScannerPage() {
   const [tabOrder, setTabOrder] = useState<StrategyKey[]>(loadTabOrder)
   const [fundamentals, setFundamentals] = useState<FundamentalsMap>({})
   const { visible: visibleCols, toggle: toggleCol, reset: resetCols, showAll: showAllCols } = useColumnVisibility(activeTab)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const main = document.getElementById("main-content")
+    const checkScroll = () => {
+      const tableTop = tableScrollRef.current?.scrollTop ?? 0
+      const mainTop = main?.scrollTop ?? 0
+      setShowScrollTop(tableTop > 300 || mainTop > 400)
+    }
+    main?.addEventListener("scroll", checkScroll, { passive: true })
+    const tableEl = tableScrollRef.current
+    tableEl?.addEventListener("scroll", checkScroll, { passive: true })
+    return () => {
+      main?.removeEventListener("scroll", checkScroll)
+      tableEl?.removeEventListener("scroll", checkScroll)
+    }
+  }, [results.length > 0])
+
+  const scrollToTop = useCallback(() => {
+    tableScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+    document.getElementById("main-content")?.scrollTo({ top: 0, behavior: "smooth" })
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -721,29 +746,31 @@ export function ScannerPage() {
 
       {results.length > 0 && (
         <>
-          {/* Strategy Tabs — drag to reorder */}
-          <div className="mb-4 overflow-x-auto" style={noScrollbar}>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
-                <div
-                  className="flex gap-1 p-1 rounded-lg w-max min-w-full"
-                  role="tablist"
-                  aria-label="Scanner strategies"
-                  style={tabsRail}
-                >
-                  {tabOrder.map((key) => (
-                    <SortableTab
-                      key={key}
-                      id={key}
-                      label={TAB_META[key].label}
-                      count={results.filter((r) => r.strategy_name === key).length}
-                      isActive={activeTab === key}
-                      onClick={() => setActiveTab(key)}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+          {/* Strategy Tabs — drag to reorder (sticky) */}
+          <div style={stickyTabs}>
+            <div className="overflow-x-auto" style={noScrollbar}>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
+                  <div
+                    className="flex gap-1 p-1 rounded-lg w-max min-w-full"
+                    role="tablist"
+                    aria-label="Scanner strategies"
+                    style={tabsRail}
+                  >
+                    {tabOrder.map((key) => (
+                      <SortableTab
+                        key={key}
+                        id={key}
+                        label={TAB_META[key].label}
+                        count={results.filter((r) => r.strategy_name === key).length}
+                        isActive={activeTab === key}
+                        onClick={() => setActiveTab(key)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
           </div>
 
           {/* Result count + column toggle */}
@@ -762,7 +789,7 @@ export function ScannerPage() {
 
           {/* Results Table */}
           <div
-            className="rounded-xl overflow-hidden"
+            className="rounded-xl"
             style={tablePanel}
           >
             {filtered.length === 0 ? (
@@ -772,7 +799,7 @@ export function ScannerPage() {
                 </p>
               </div>
             ) : (
-              <div className="w-full overflow-x-auto" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
+              <div ref={tableScrollRef} className="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)]" id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
                 {activeTab === "composite" && <CompositeTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
                 {activeTab === "supertrend" && <SuperTrendTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
                 {activeTab === "adx" && <ADXTable results={filtered} fundamentals={fundamentals} vis={visibleCols} />}
@@ -788,6 +815,18 @@ export function ScannerPage() {
             )}
           </div>
         </>
+      )}
+
+      {/* Scroll to top */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Scroll to top"
+          className="fixed bottom-6 right-6 z-40 rounded-full p-3 cursor-pointer transition-all duration-200 hover:scale-110 animate-fade-in min-h-[44px] min-w-[44px] flex items-center justify-center"
+          style={{ background: "var(--gradient-accent)", boxShadow: "var(--shadow-elevated)", color: "#fff" }}
+        >
+          <ArrowUp size={20} strokeWidth={2.5} />
+        </button>
       )}
     </div>
   )
@@ -916,7 +955,7 @@ function CompositeTable({ results, fundamentals, vis }: TableProps) {
   const sorted = [...results].sort((a, b) => b.score - a.score)
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -963,7 +1002,7 @@ function CompositeTable({ results, fundamentals, vis }: TableProps) {
 function SuperTrendTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1022,7 +1061,7 @@ function SuperTrendTable({ results, fundamentals, vis }: TableProps) {
 function ADXTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1089,7 +1128,7 @@ function ADXTable({ results, fundamentals, vis }: TableProps) {
 function StochasticTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1156,7 +1195,7 @@ function StochasticTable({ results, fundamentals, vis }: TableProps) {
 function BollingerTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1226,7 +1265,7 @@ function BollingerTable({ results, fundamentals, vis }: TableProps) {
 function High52WTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1296,7 +1335,7 @@ function High52WTable({ results, fundamentals, vis }: TableProps) {
 function Low52WTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1367,7 +1406,7 @@ function Low52WTable({ results, fundamentals, vis }: TableProps) {
 function FibTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1411,7 +1450,7 @@ function FibTable({ results, fundamentals, vis }: TableProps) {
 function PivotTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1474,7 +1513,7 @@ function PivotTable({ results, fundamentals, vis }: TableProps) {
 function MACDTable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
@@ -1537,7 +1576,7 @@ function MACDTable({ results, fundamentals, vis }: TableProps) {
 function RSITable({ results, fundamentals, vis }: TableProps) {
   return (
     <table className="w-full text-[13px]">
-      <thead>
+      <thead style={stickyThead}>
         <tr style={bgCard}>
           {vis.has("rank") && <TH>#</TH>}
           {vis.has("ticker") && <TH>Ticker</TH>}
