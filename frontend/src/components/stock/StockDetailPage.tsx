@@ -280,7 +280,6 @@ export function StockDetailPage() {
 
   const handleRangeChange = (r: ChartRange) => {
     setRange(r)
-    fetchChart(r)
   }
 
   const isPositive = quote && quote.change_pct != null ? quote.change_pct >= 0 : true
