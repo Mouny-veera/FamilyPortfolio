@@ -12,71 +12,58 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
-RESOLUTION_MAP = {
-    "1D": ("5", 1),
-    "D": ("D", 180),
-    "W": ("W", 730),
-    "M": ("M", 1825),
+RANGE_DAYS = {
+    "1D": 1, "5D": 5, "1M": 30, "3M": 90,
+    "6M": 180, "1Y": 365, "5Y": 1825, "ALL": 3650,
+}
+
+INTRADAY_RESOLUTION = {
+    "1D": "5", "5D": "15",
 }
 
 
-def _resample_to_weekly(candles: list[dict]) -> list[dict]:
-    """Aggregate daily candles into weekly OHLCV."""
+def _resample_ohlcv(candles: list[dict], rule: str) -> list[dict]:
     if not candles:
         return candles
     import pandas as pd
     df = pd.DataFrame(candles)
     df["dt"] = pd.to_datetime(df["time"], unit="s")
     df = df.set_index("dt")
-    weekly = df.resample("W-FRI").agg({
+    resampled = df.resample(rule).agg({
         "open": "first", "high": "max", "low": "min",
         "close": "last", "volume": "sum", "time": "last",
     }).dropna(subset=["open"])
     return [
         {"time": int(r["time"]), "open": round(r["open"], 2), "high": round(r["high"], 2),
          "low": round(r["low"], 2), "close": round(r["close"], 2), "volume": int(r["volume"])}
-        for _, r in weekly.iterrows()
-    ]
-
-
-def _resample_to_monthly(candles: list[dict]) -> list[dict]:
-    """Aggregate daily candles into monthly OHLCV."""
-    if not candles:
-        return candles
-    import pandas as pd
-    df = pd.DataFrame(candles)
-    df["dt"] = pd.to_datetime(df["time"], unit="s")
-    df = df.set_index("dt")
-    monthly = df.resample("ME").agg({
-        "open": "first", "high": "max", "low": "min",
-        "close": "last", "volume": "sum", "time": "last",
-    }).dropna(subset=["open"])
-    return [
-        {"time": int(r["time"]), "open": round(r["open"], 2), "high": round(r["high"], 2),
-         "low": round(r["low"], 2), "close": round(r["close"], 2), "volume": int(r["volume"])}
-        for _, r in monthly.iterrows()
+        for _, r in resampled.iterrows()
     ]
 
 
 @router.get("/{ticker}/chart")
 async def get_stock_chart(
     ticker: str,
-    range: str = Query("D", pattern="^(1D|D|W|M)$"),
+    resolution: str = Query("D", pattern="^(D|W|M)$"),
+    range: str = Query("6M", pattern="^(1D|5D|1M|3M|6M|1Y|5Y|ALL)$"),
 ):
     chart_limiter.check()
-    resolution, days = RESOLUTION_MAP[range]
+    days = RANGE_DAYS[range]
+
+    is_intraday = range in INTRADAY_RESOLUTION
+    fyers_resolution = INTRADAY_RESOLUTION.get(range, resolution)
+
     provider = get_active_provider()
 
     end = date.today()
     start = end - timedelta(days=days)
 
     from ..services.market_data import FyersProvider
-    if isinstance(provider, FyersProvider) and resolution not in ("D", "W", "M"):
+    if isinstance(provider, FyersProvider) and is_intraday:
         from ..services.nse_master import get_fyers_symbol
         symbol = get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
         data = {
             "symbol": symbol,
-            "resolution": resolution,
+            "resolution": fyers_resolution,
             "date_format": "1",
             "range_from": start.isoformat(),
             "range_to": end.isoformat(),
@@ -100,7 +87,7 @@ async def get_stock_chart(
                         "volume": int(vol) if vol == vol else 0,
                     })
                 if clean:
-                    return {"candles": clean, "resolution": resolution}
+                    return {"candles": clean, "resolution": fyers_resolution}
         except Exception as e:
             logger.error("Fyers intraday error for %s: %s", ticker, e)
 
@@ -166,9 +153,9 @@ async def get_stock_chart(
         raise HTTPException(status_code=404, detail=f"No chart data for {ticker}")
 
     if resolution == "W":
-        candles = _resample_to_weekly(candles)
+        candles = _resample_ohlcv(candles, "W-FRI")
     elif resolution == "M":
-        candles = _resample_to_monthly(candles)
+        candles = _resample_ohlcv(candles, "ME")
 
     return {"candles": candles, "resolution": resolution}
 

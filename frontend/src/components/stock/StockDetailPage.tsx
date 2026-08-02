@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, TrendingUp, TrendingDown, Loader2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
-import { api, type StockQuote, type StockCandle, type ChartRange } from "@/lib/api"
+import { api, type StockQuote, type StockCandle, type ChartResolution, type ChartRange } from "@/lib/api"
 import { formatCurrency, formatNumber } from "@/lib/utils"
 import { StockChart } from "./StockChart"
 import {
@@ -12,11 +12,21 @@ import {
   saveIndicators,
 } from "./indicators"
 
-const RANGES: { key: ChartRange; label: string; tooltip: string }[] = [
-  { key: "1D", label: "1D", tooltip: "Intraday (5-min candles)" },
-  { key: "D", label: "D", tooltip: "Daily candles (6 months)" },
-  { key: "W", label: "W", tooltip: "Weekly candles (2 years)" },
-  { key: "M", label: "M", tooltip: "Monthly candles (5 years)" },
+const RESOLUTIONS: { key: ChartResolution; label: string }[] = [
+  { key: "D", label: "D" },
+  { key: "W", label: "W" },
+  { key: "M", label: "M" },
+]
+
+const DATE_RANGES: { key: ChartRange; label: string }[] = [
+  { key: "1D", label: "1D" },
+  { key: "5D", label: "5D" },
+  { key: "1M", label: "1M" },
+  { key: "3M", label: "3M" },
+  { key: "6M", label: "6M" },
+  { key: "1Y", label: "1Y" },
+  { key: "5Y", label: "5Y" },
+  { key: "ALL", label: "All" },
 ]
 
 const SMA_OPTIONS = [
@@ -219,12 +229,15 @@ export function StockDetailPage() {
 
   const [quote, setQuote] = useState<StockQuote | null>(null)
   const [candles, setCandles] = useState<StockCandle[]>([])
-  const [resolution, setResolution] = useState("")
-  const [range, setRange] = useState<ChartRange>("D")
+  const [chartResolution, setChartResolution] = useState("")
+  const [resolution, setResolution] = useState<ChartResolution>("D")
+  const [range, setRange] = useState<ChartRange>("6M")
   const [chartLoading, setChartLoading] = useState(true)
   const [quoteLoading, setQuoteLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeIndicators, setActiveIndicators] = useState<Set<IndicatorId>>(loadSavedIndicators)
+
+  const isIntraday = range === "1D" || range === "5D"
 
   const toggleIndicator = useCallback((id: IndicatorId) => {
     setActiveIndicators(prev => {
@@ -236,14 +249,14 @@ export function StockDetailPage() {
     })
   }, [])
 
-  const fetchChart = useCallback(async (r: ChartRange) => {
+  const fetchChart = useCallback(async (res: ChartResolution, rng: ChartRange) => {
     if (!ticker) return
     setChartLoading(true)
     setError(null)
     try {
-      const data = await api.getStockChart(ticker, r)
+      const data = await api.getStockChart(ticker, res, rng)
       setCandles(data.candles)
-      setResolution(data.resolution)
+      setChartResolution(data.resolution)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load chart")
     } finally {
@@ -265,15 +278,19 @@ export function StockDetailPage() {
   }, [ticker])
 
   useEffect(() => {
-    fetchChart(range)
+    fetchChart(resolution, range)
     fetchQuote()
-  }, [fetchChart, fetchQuote, range])
+  }, [fetchChart, fetchQuote, resolution, range])
 
   useEffect(() => {
     const handler = () => fetchQuote()
     window.addEventListener("prices-refreshed", handler)
     return () => window.removeEventListener("prices-refreshed", handler)
   }, [fetchQuote])
+
+  const handleResolutionChange = (r: ChartResolution) => {
+    setResolution(r)
+  }
 
   const handleRangeChange = (r: ChartRange) => {
     setRange(r)
@@ -325,7 +342,7 @@ export function StockDetailPage() {
           )}
         </div>
         <button
-          onClick={() => { fetchQuote(); fetchChart(range) }}
+          onClick={() => { fetchQuote(); fetchChart(resolution, range) }}
           className="p-2 rounded-lg transition-colors cursor-pointer min-h-[44px] min-w-[44px] lg:min-h-0 lg:min-w-0 flex items-center justify-center"
           style={{ color: "var(--text-secondary)", backgroundColor: "var(--bg-elevated)" }}
           aria-label="Refresh data"
@@ -337,28 +354,57 @@ export function StockDetailPage() {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Chart area */}
         <div className="flex-1 min-w-0">
-          {/* Controls row: Range picker + Indicators */}
-          <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-            {/* Range picker */}
+          {/* Controls: Resolution picker + Date range picker */}
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            {/* Resolution picker */}
             <div
-              className="flex items-center gap-1 p-1 rounded-lg w-fit"
+              className="flex items-center gap-1 p-1 rounded-lg"
               style={{ backgroundColor: "var(--bg-elevated)" }}
               role="tablist"
-              aria-label="Chart resolution"
+              aria-label="Candle resolution"
             >
-              {RANGES.map((r) => (
+              {RESOLUTIONS.map((r) => (
+                <button
+                  key={r.key}
+                  role="tab"
+                  aria-selected={!isIntraday && resolution === r.key}
+                  onClick={() => handleResolutionChange(r.key)}
+                  className="px-3 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0"
+                  style={{
+                    color: !isIntraday && resolution === r.key ? "white" : "var(--text-muted)",
+                    background: !isIntraday && resolution === r.key ? "var(--gradient-accent)" : "transparent",
+                    boxShadow: !isIntraday && resolution === r.key ? "var(--shadow-accent)" : "none",
+                    opacity: isIntraday ? 0.5 : 1,
+                  }}
+                  disabled={isIntraday}
+                  title={`Each candle = 1 ${r.key === "D" ? "day" : r.key === "W" ? "week" : "month"}`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ width: 1, height: 24, backgroundColor: "var(--border-color)" }} />
+
+            {/* Date range picker */}
+            <div
+              className="flex items-center gap-1 p-1 rounded-lg overflow-x-auto"
+              style={{ backgroundColor: "var(--bg-elevated)" }}
+              role="tablist"
+              aria-label="Date range"
+            >
+              {DATE_RANGES.map((r) => (
                 <button
                   key={r.key}
                   role="tab"
                   aria-selected={range === r.key}
                   onClick={() => handleRangeChange(r.key)}
-                  className="px-3 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0"
+                  className="px-2.5 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0 shrink-0"
                   style={{
                     color: range === r.key ? "white" : "var(--text-muted)",
                     background: range === r.key ? "var(--gradient-accent)" : "transparent",
                     boxShadow: range === r.key ? "var(--shadow-accent)" : "none",
                   }}
-                  title={r.tooltip}
                 >
                   {r.label}
                 </button>
@@ -388,7 +434,7 @@ export function StockDetailPage() {
               <div className="flex flex-col items-center justify-center h-full gap-2">
                 <span className="text-[13px]" style={{ color: "var(--color-loss)" }}>{error}</span>
                 <button
-                  onClick={() => fetchChart(range)}
+                  onClick={() => fetchChart(resolution, range)}
                   className="text-[12px] font-medium px-3 py-1.5 rounded-md cursor-pointer"
                   style={{ color: "var(--color-accent)", backgroundColor: "var(--accent-10)" }}
                 >
@@ -396,7 +442,7 @@ export function StockDetailPage() {
                 </button>
               </div>
             ) : candles.length > 0 ? (
-              <StockChart candles={candles} resolution={resolution} activeIndicators={activeIndicators} />
+              <StockChart candles={candles} resolution={chartResolution} activeIndicators={activeIndicators} />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>No data available</span>
