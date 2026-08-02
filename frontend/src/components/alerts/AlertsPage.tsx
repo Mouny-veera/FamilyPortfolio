@@ -287,8 +287,8 @@ export function AlertsPage() {
     return (
       <div className="animate-page-enter">
         <div className="flex items-center justify-between mb-6">
-          <div className="h-7 w-32 rounded-md" style={{ backgroundColor: "var(--bg-elevated)" }} />
-          <div className="h-7 w-36 rounded-lg" style={{ backgroundColor: "var(--bg-elevated)" }} />
+          <div className="h-7 w-32 rounded-md shimmer" />
+          <div className="h-7 w-36 rounded-lg shimmer" />
         </div>
         {[...Array(3)].map((_, i) => (
           <div
@@ -298,23 +298,23 @@ export function AlertsPage() {
           >
             <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: "var(--bg-card)" }}>
               <div className="flex items-center gap-2.5">
-                <div className="h-4 w-4 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                <div className="h-4 w-24 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                <div className="h-5 w-16 rounded-md" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                <div className="h-4 w-4 rounded shimmer" />
+                <div className="h-4 w-24 rounded shimmer" />
+                <div className="h-5 w-16 rounded-md shimmer" />
               </div>
               <div className="flex items-center gap-4">
-                <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                <div className="h-4 w-20 rounded shimmer" />
+                <div className="h-4 w-20 rounded shimmer" />
               </div>
             </div>
             <div style={{ borderTop: "1px solid var(--border-subtle)" }}>
               {[...Array(2)].map((_, j) => (
                 <div key={j} className="flex items-center gap-4 px-4 py-2.5" style={{ borderTop: j > 0 ? "1px solid var(--border-subtle)" : undefined }}>
-                  <div className="h-4 w-8 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                  <div className="h-4 w-20 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                  <div className="h-4 w-8 rounded shimmer" />
+                  <div className="h-4 w-20 rounded shimmer" />
                   <div className="flex-1" />
-                  <div className="h-4 w-16 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
-                  <div className="h-4 w-16 rounded" style={{ backgroundColor: "var(--bg-elevated)" }} />
+                  <div className="h-4 w-16 rounded shimmer" />
+                  <div className="h-4 w-16 rounded shimmer" />
                 </div>
               ))}
             </div>

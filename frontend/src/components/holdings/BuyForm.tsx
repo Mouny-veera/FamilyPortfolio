@@ -220,7 +220,7 @@ export function BuyForm({ memberId, onClose, onSuccess }: BuyFormProps) {
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1.5 rounded-lg cursor-pointer transition-colors duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+            className="p-2 rounded-lg cursor-pointer transition-colors duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
           >
             <X size={16} strokeWidth={1.5} style={{ color: "var(--text-muted)" }} />
           </button>

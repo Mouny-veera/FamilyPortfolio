@@ -65,9 +65,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           >
             FP
           </div>
-          <h1 className="text-sm font-semibold tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>
+          <span className="text-sm font-semibold tracking-tight leading-none" style={{ color: "var(--text-primary)" }}>
             Family Portfolio
-          </h1>
+          </span>
         </div>
         <button
           onClick={onMobileClose}
@@ -91,7 +91,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                   aria-expanded={holdingsOpen}
                   aria-controls="holdings-submenu"
                   className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150",
+                    "w-full flex items-center gap-2.5 px-3 py-2 min-h-[44px] lg:min-h-0 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-150",
                     isActive
                       ? "text-accent"
                       : "hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
@@ -145,7 +145,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200",
+                  "relative flex items-center gap-2.5 px-3 py-2 min-h-[44px] lg:min-h-0 rounded-lg text-[13px] font-medium transition-all duration-200",
                   isActive
                     ? "text-accent"
                     : "hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"

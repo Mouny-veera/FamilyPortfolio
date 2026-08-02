@@ -45,7 +45,7 @@ export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | nu
     >
       <button
         onClick={onMenuToggle}
-        className="p-2.5 -ml-1 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 lg:hidden"
+        className="p-2.5 -ml-1 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
         aria-label="Open menu"
       >
         <Menu size={20} strokeWidth={1.5} style={{ color: "var(--text-primary)" }} />
@@ -66,7 +66,7 @@ export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | nu
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Refresh prices"
         >
           <RefreshCw
@@ -79,7 +79,7 @@ export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | nu
 
         <button
           onClick={toggleTheme}
-          className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95"
+          className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
         >
           {dark ? (
@@ -92,7 +92,7 @@ export function TopBar({ lastRefresh, onMenuToggle }: { lastRefresh: string | nu
         {user && (
           <button
             onClick={logout}
-            className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95"
+            className="p-2.5 rounded-lg cursor-pointer transition-all duration-150 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-95 min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label={`Sign out ${user.name}`}
             title={user.email}
           >

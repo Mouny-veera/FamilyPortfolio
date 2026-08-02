@@ -140,18 +140,21 @@ function SortableHeader({
   return (
     <th
       scope="col"
-      onClick={() => onSort(field)}
-      className={`${align === "right" ? "text-right" : "text-left"} px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none transition-colors duration-150`}
-      style={{ color: isActive ? "var(--color-accent)" : "var(--text-muted)" }}
+      className={`${align === "right" ? "text-right" : "text-left"} px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap`}
       aria-sort={isActive ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
-      <span className="inline-flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className="inline-flex items-center gap-1 cursor-pointer select-none transition-colors duration-150 bg-transparent border-none p-0 font-semibold uppercase tracking-wider text-[10px]"
+        style={{ color: isActive ? "var(--color-accent)" : "var(--text-muted)" }}
+      >
         {label}
         {isActive
           ? (dir === "desc" ? <ArrowDown size={10} strokeWidth={2.5} /> : <ArrowUp size={10} strokeWidth={2.5} />)
           : <ArrowUpDown size={10} strokeWidth={2} style={arrowOpacity} />
         }
-      </span>
+      </button>
     </th>
   )
 }

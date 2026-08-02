@@ -276,7 +276,7 @@ export function SettingsPage() {
                 <button
                   onClick={checkTokenStatus}
                   disabled={tokenStatusLoading}
-                  className="text-[11px] px-1.5 py-1 rounded-md cursor-pointer transition-all duration-200 disabled:opacity-40"
+                  className="text-[11px] px-1.5 py-1 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-md cursor-pointer transition-all duration-200 disabled:opacity-40"
                   style={{ color: "var(--text-muted)" }}
                   aria-label="Re-check token status"
                 >
@@ -527,7 +527,7 @@ export function SettingsPage() {
                   }
                 }}
                 disabled={niftyRefreshing}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 text-[11px] px-2 py-1 min-h-[44px] sm:min-h-0 rounded-md cursor-pointer transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ color: "var(--color-info-light)", border: "1px solid var(--info-20)" }}
               >
                 <RefreshCw size={11} className={niftyRefreshing ? "animate-spin" : ""} />
