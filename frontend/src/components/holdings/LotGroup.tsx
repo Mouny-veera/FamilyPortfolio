@@ -195,65 +195,67 @@ export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: L
           backgroundColor: open ? "var(--bg-elevated)" : "var(--bg-card)",
         }}
       >
-        <button
-          onClick={() => setOpen(!open)}
-          aria-expanded={open}
-          aria-controls={`lotgroup-${group.ticker}`}
-          className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0"
-        >
-          <ChevronRight
-            size={14}
-            strokeWidth={2}
-            className={cn("transition-transform duration-200 shrink-0", open && "rotate-90")}
-            style={textMuted}
-          />
-          <span className="font-semibold text-[13px] tracking-tight" style={textPrimary}>
-            {group.ticker}
-          </span>
-          {group.mapping_status === "verified" && (
-            <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
-          )}
-          {isUnmatched && (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
-              style={unmatchedBadge}
-            >
-              <AlertTriangle size={10} strokeWidth={2.5} />
-              Unmatched
-            </span>
-          )}
-          <span
-            className="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
-            style={lotCountBadge}
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <button
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            aria-controls={`lotgroup-${group.ticker}`}
+            className="flex items-center gap-2.5 cursor-pointer min-w-0"
           >
-            {group.lot_count} lot{group.lot_count !== 1 ? "s" : ""}
-          </span>
-          {group.scanner_badge && (
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold"
-              style={scannerBadge}
-            >
-              {group.scanner_badge}
+            <ChevronRight
+              size={14}
+              strokeWidth={2}
+              className={cn("transition-transform duration-200 shrink-0", open && "rotate-90")}
+              style={textMuted}
+            />
+            <span className="font-semibold text-[13px] tracking-tight" style={textPrimary}>
+              {group.ticker}
             </span>
-          )}
-          {isAlert && (
+            {group.mapping_status === "verified" && (
+              <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
+            )}
+            {isUnmatched && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
+                style={unmatchedBadge}
+              >
+                <AlertTriangle size={10} strokeWidth={2.5} />
+                Unmatched
+              </span>
+            )}
             <span
-              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold animate-pulse-subtle"
-              style={alertBadge}
+              className="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
+              style={lotCountBadge}
             >
-              <TrendingUp size={10} strokeWidth={2.5} />
-              ≥10% Profit
+              {group.lot_count} lot{group.lot_count !== 1 ? "s" : ""}
             </span>
-          )}
-        </button>
-        <button
-          onClick={() => navigate(`/stock/${group.ticker}`)}
-          className="shrink-0 p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center cursor-pointer transition-colors rounded-md"
-          style={colorAccent}
-          aria-label={`View ${group.ticker} chart`}
-        >
-          <BarChart3 size={13} strokeWidth={2} />
-        </button>
+            {group.scanner_badge && (
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold"
+                style={scannerBadge}
+              >
+                {group.scanner_badge}
+              </span>
+            )}
+            {isAlert && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold animate-pulse-subtle"
+                style={alertBadge}
+              >
+                <TrendingUp size={10} strokeWidth={2.5} />
+                ≥10% Profit
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => navigate(`/stock/${group.ticker}`)}
+            className="shrink-0 p-1 flex items-center justify-center cursor-pointer transition-colors rounded-md"
+            style={colorAccent}
+            aria-label={`View ${group.ticker} chart`}
+          >
+            <BarChart3 size={13} strokeWidth={2} />
+          </button>
+        </div>
         <div className="flex items-center gap-6 text-right shrink-0">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-wide whitespace-nowrap" style={textMuted}>Qty</p>
@@ -332,42 +334,44 @@ export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: L
         }}
       >
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => setOpen(!open)}
-            aria-expanded={open}
-            aria-controls={`lotgroup-${group.ticker}`}
-            className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
-          >
-            <ChevronRight
-              size={14}
-              strokeWidth={2}
-              className={cn("transition-transform duration-200 shrink-0", open && "rotate-90")}
-              style={textMuted}
-            />
-            <span className="font-semibold text-sm tracking-tight truncate" style={textPrimary}>
-              {group.ticker}
-            </span>
-            {group.mapping_status === "verified" && (
-              <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
-            )}
-            {isUnmatched && (
-              <span
-                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
-                style={unmatchedBadge}
-              >
-                <AlertTriangle size={10} strokeWidth={2.5} />
-                Unmatched
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <button
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+              aria-controls={`lotgroup-${group.ticker}`}
+              className="flex items-center gap-2 cursor-pointer min-w-0"
+            >
+              <ChevronRight
+                size={14}
+                strokeWidth={2}
+                className={cn("transition-transform duration-200 shrink-0", open && "rotate-90")}
+                style={textMuted}
+              />
+              <span className="font-semibold text-sm tracking-tight truncate" style={textPrimary}>
+                {group.ticker}
               </span>
-            )}
-          </button>
-          <button
-            onClick={() => navigate(`/stock/${group.ticker}`)}
-            className="shrink-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors rounded-md"
-            style={colorAccent}
-            aria-label={`View ${group.ticker} chart`}
-          >
-            <BarChart3 size={13} strokeWidth={2} />
-          </button>
+              {group.mapping_status === "verified" && (
+                <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
+              )}
+              {isUnmatched && (
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
+                  style={unmatchedBadge}
+                >
+                  <AlertTriangle size={10} strokeWidth={2.5} />
+                  Unmatched
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate(`/stock/${group.ticker}`)}
+              className="shrink-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors rounded-md"
+              style={colorAccent}
+              aria-label={`View ${group.ticker} chart`}
+            >
+              <BarChart3 size={13} strokeWidth={2} />
+            </button>
+          </div>
 
           <button
             onClick={(e) => {
