@@ -12,14 +12,11 @@ import {
   saveIndicators,
 } from "./indicators"
 
-const RANGES: { key: ChartRange; label: string }[] = [
-  { key: "1D", label: "1D" },
-  { key: "1W", label: "1W" },
-  { key: "1M", label: "1M" },
-  { key: "3M", label: "3M" },
-  { key: "6M", label: "6M" },
-  { key: "1Y", label: "1Y" },
-  { key: "5Y", label: "5Y" },
+const RANGES: { key: ChartRange; label: string; tooltip: string }[] = [
+  { key: "1D", label: "1D", tooltip: "Intraday (5-min candles)" },
+  { key: "D", label: "D", tooltip: "Daily candles (6 months)" },
+  { key: "W", label: "W", tooltip: "Weekly candles (2 years)" },
+  { key: "M", label: "M", tooltip: "Monthly candles (5 years)" },
 ]
 
 const SMA_OPTIONS = [
@@ -223,7 +220,7 @@ export function StockDetailPage() {
   const [quote, setQuote] = useState<StockQuote | null>(null)
   const [candles, setCandles] = useState<StockCandle[]>([])
   const [resolution, setResolution] = useState("")
-  const [range, setRange] = useState<ChartRange>("6M")
+  const [range, setRange] = useState<ChartRange>("D")
   const [chartLoading, setChartLoading] = useState(true)
   const [quoteLoading, setQuoteLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -347,7 +344,7 @@ export function StockDetailPage() {
               className="flex items-center gap-1 p-1 rounded-lg w-fit"
               style={{ backgroundColor: "var(--bg-elevated)" }}
               role="tablist"
-              aria-label="Chart time range"
+              aria-label="Chart resolution"
             >
               {RANGES.map((r) => (
                 <button
@@ -361,6 +358,7 @@ export function StockDetailPage() {
                     background: range === r.key ? "var(--gradient-accent)" : "transparent",
                     boxShadow: range === r.key ? "var(--shadow-accent)" : "none",
                   }}
+                  title={r.tooltip}
                 >
                   {r.label}
                 </button>

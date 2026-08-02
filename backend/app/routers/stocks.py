@@ -14,19 +14,54 @@ router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
 RESOLUTION_MAP = {
     "1D": ("5", 1),
-    "1W": ("15", 7),
-    "1M": ("60", 30),
-    "3M": ("D", 90),
-    "6M": ("D", 180),
-    "1Y": ("D", 365),
-    "5Y": ("W", 1825),
+    "D": ("D", 180),
+    "W": ("W", 730),
+    "M": ("M", 1825),
 }
+
+
+def _resample_to_weekly(candles: list[dict]) -> list[dict]:
+    """Aggregate daily candles into weekly OHLCV."""
+    if not candles:
+        return candles
+    import pandas as pd
+    df = pd.DataFrame(candles)
+    df["dt"] = pd.to_datetime(df["time"], unit="s")
+    df = df.set_index("dt")
+    weekly = df.resample("W-FRI").agg({
+        "open": "first", "high": "max", "low": "min",
+        "close": "last", "volume": "sum", "time": "last",
+    }).dropna(subset=["open"])
+    return [
+        {"time": int(r["time"]), "open": round(r["open"], 2), "high": round(r["high"], 2),
+         "low": round(r["low"], 2), "close": round(r["close"], 2), "volume": int(r["volume"])}
+        for _, r in weekly.iterrows()
+    ]
+
+
+def _resample_to_monthly(candles: list[dict]) -> list[dict]:
+    """Aggregate daily candles into monthly OHLCV."""
+    if not candles:
+        return candles
+    import pandas as pd
+    df = pd.DataFrame(candles)
+    df["dt"] = pd.to_datetime(df["time"], unit="s")
+    df = df.set_index("dt")
+    monthly = df.resample("ME").agg({
+        "open": "first", "high": "max", "low": "min",
+        "close": "last", "volume": "sum", "time": "last",
+    }).dropna(subset=["open"])
+    return [
+        {"time": int(r["time"]), "open": round(r["open"], 2), "high": round(r["high"], 2),
+         "low": round(r["low"], 2), "close": round(r["close"], 2), "volume": int(r["volume"])}
+        for _, r in monthly.iterrows()
+    ]
 
 
 @router.get("/{ticker}/chart")
 async def get_stock_chart(
     ticker: str,
-    range: str = Query("6M", pattern="^(1D|1W|1M|3M|6M|1Y|5Y)$"),
+    range: str = Query("D", pattern="^(1D|D|W|M)$"),
 ):
     chart_limiter.check()
     resolution, days = RESOLUTION_MAP[range]
@@ -36,7 +71,7 @@ async def get_stock_chart(
     start = end - timedelta(days=days)
 
     from ..services.market_data import FyersProvider
-    if isinstance(provider, FyersProvider) and resolution not in ("D", "W"):
+    if isinstance(provider, FyersProvider) and resolution not in ("D", "W", "M"):
         from ..services.nse_master import get_fyers_symbol
         symbol = get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
         data = {
@@ -129,6 +164,11 @@ async def get_stock_chart(
 
     if not candles:
         raise HTTPException(status_code=404, detail=f"No chart data for {ticker}")
+
+    if resolution == "W":
+        candles = _resample_to_weekly(candles)
+    elif resolution == "M":
+        candles = _resample_to_monthly(candles)
 
     return {"candles": candles, "resolution": resolution}
 

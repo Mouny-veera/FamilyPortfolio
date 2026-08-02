@@ -173,7 +173,7 @@ export interface StockQuote {
   low_52w: number | null
 }
 
-export type ChartRange = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y"
+export type ChartRange = "1D" | "D" | "W" | "M"
 
 export const api = {
   getMembers: () => request<Member[]>("/members"),
@@ -235,7 +235,7 @@ export const api = {
   refreshNifty200: () => request<{ status: string; count: number }>("/settings/refresh-nifty200", { method: "POST" }),
   getAutoScan: () => request<{ enabled: boolean; scan_time: string; last_auto_scan: string | null; next_scan: string | null }>("/settings/auto-scan"),
   setAutoScan: (enabled: boolean) => request<{ enabled: boolean; scan_time: string; last_auto_scan: string | null; next_scan: string | null }>("/settings/auto-scan", { method: "POST", body: JSON.stringify({ enabled }) }),
-  getStockChart: (ticker: string, range: ChartRange = "6M") =>
+  getStockChart: (ticker: string, range: ChartRange = "D") =>
     request<StockChart>(`/stocks/${encodeURIComponent(ticker)}/chart?range=${range}`),
   getStockQuote: (ticker: string) =>
     request<StockQuote>(`/stocks/${encodeURIComponent(ticker)}/quote`),
