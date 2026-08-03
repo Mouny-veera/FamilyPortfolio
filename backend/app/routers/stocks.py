@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/stocks", tags=["stocks"])
 
 RANGE_DAYS = {
     "1D": 1, "5D": 5, "1M": 30, "3M": 90,
-    "6M": 180, "1Y": 365, "5Y": 1825, "ALL": 3650,
+    "6M": 180, "1Y": 365, "5Y": 1825, "ALL": 15000,
 }
 
 VALID_RESOLUTIONS = {"1", "5", "15", "30", "60", "120", "D", "W", "M"}
