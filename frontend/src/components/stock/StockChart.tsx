@@ -29,6 +29,8 @@ interface StockChartProps {
   candles: StockCandle[]
   resolution: string
   activeIndicators: Set<IndicatorId>
+  selectedRange?: string | null
+  onUserZoom?: () => void
 }
 
 interface OHLCVData {
@@ -93,10 +95,21 @@ function formatLegendVol(v: number): string {
   return v.toLocaleString("en-IN")
 }
 
-export function StockChart({ candles, resolution, activeIndicators }: StockChartProps) {
+const RANGE_SECONDS: Record<string, number> = {
+  "1D": 86400,
+  "5D": 5 * 86400,
+  "1M": 30 * 86400,
+  "3M": 90 * 86400,
+  "6M": 180 * 86400,
+  "1Y": 365 * 86400,
+  "5Y": 1825 * 86400,
+}
+
+export function StockChart({ candles, resolution, activeIndicators, selectedRange, onUserZoom }: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const [ohlcv, setOhlcv] = useState<OHLCVData | null>(null)
+  const isProgrammaticZoom = useRef(false)
 
   const isIntraday = ["1", "5", "15", "30", "60", "120"].includes(resolution)
 
@@ -329,9 +342,36 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       signalLine.setData(toLineData(macdData.signal))
     }
 
+    // Set initial visible range based on selected range, or fitContent for ALL
     chart.timeScale().fitContent()
+    isProgrammaticZoom.current = true
+    if (selectedRange && selectedRange !== "ALL" && RANGE_SECONDS[selectedRange] && candles.length > 1) {
+      const lastTime = candles[candles.length - 1].time
+      const targetStart = lastTime - RANGE_SECONDS[selectedRange]
+      const startIdx = candles.findIndex(c => c.time >= targetStart)
+      if (startIdx >= 0 && startIdx < candles.length - 1) {
+        requestAnimationFrame(() => {
+          chart.timeScale().setVisibleLogicalRange({ from: startIdx, to: candles.length - 1 })
+          setTimeout(() => { isProgrammaticZoom.current = false }, 50)
+        })
+      } else {
+        setTimeout(() => { isProgrammaticZoom.current = false }, 50)
+      }
+    } else {
+      setTimeout(() => { isProgrammaticZoom.current = false }, 50)
+    }
+
+    // Deselect range buttons when user zooms/pans
+    if (onUserZoom) {
+      chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+        if (!isProgrammaticZoom.current) {
+          onUserZoom()
+        }
+      })
+    }
+
     chartRef.current = chart
-  }, [candles, resolution, isIntraday, activeIndicators])
+  }, [candles, resolution, isIntraday, activeIndicators, selectedRange, onUserZoom])
 
   useEffect(() => {
     buildChart()

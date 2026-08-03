@@ -258,6 +258,7 @@ export function StockDetailPage() {
   const [chartResolution, setChartResolution] = useState("")
   const [resolution, setResolution] = useState<ChartResolution>("120")
   const [range, setRange] = useState<ChartRange>("6M")
+  const [rangeHighlighted, setRangeHighlighted] = useState(true)
   const [chartLoading, setChartLoading] = useState(true)
   const [quoteLoading, setQuoteLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -323,7 +324,12 @@ export function StockDetailPage() {
     const defaultRes = RANGE_DEFAULT_RESOLUTION[r]
     setResolution(defaultRes)
     setRange(r)
+    setRangeHighlighted(true)
   }
+
+  const handleUserZoom = useCallback(() => {
+    setRangeHighlighted(false)
+  }, [])
 
   const isPositive = quote && quote.change_pct != null ? quote.change_pct >= 0 : true
   const changeColor = isPositive ? "var(--color-profit)" : "var(--color-loss)"
@@ -417,22 +423,25 @@ export function StockDetailPage() {
               role="tablist"
               aria-label="Date range"
             >
-              {DATE_RANGES.map((r) => (
-                <button
-                  key={r.key}
-                  role="tab"
-                  aria-selected={range === r.key}
-                  onClick={() => handleRangeChange(r.key)}
-                  className="px-2.5 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0 shrink-0"
-                  style={{
-                    color: range === r.key ? "white" : "var(--text-muted)",
-                    background: range === r.key ? "var(--gradient-accent)" : "transparent",
-                    boxShadow: range === r.key ? "var(--shadow-accent)" : "none",
-                  }}
-                >
-                  {r.label}
-                </button>
-              ))}
+              {DATE_RANGES.map((r) => {
+                const isActive = rangeHighlighted && range === r.key
+                return (
+                  <button
+                    key={r.key}
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => handleRangeChange(r.key)}
+                    className="px-2.5 py-1.5 rounded-md text-[12px] font-semibold tracking-wide transition-all cursor-pointer min-h-[36px] lg:min-h-0 shrink-0"
+                    style={{
+                      color: isActive ? "white" : "var(--text-muted)",
+                      background: isActive ? "var(--gradient-accent)" : "transparent",
+                      boxShadow: isActive ? "var(--shadow-accent)" : "none",
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -466,7 +475,7 @@ export function StockDetailPage() {
                 </button>
               </div>
             ) : candles.length > 0 ? (
-              <StockChart candles={candles} resolution={chartResolution} activeIndicators={activeIndicators} />
+              <StockChart candles={candles} resolution={chartResolution} activeIndicators={activeIndicators} selectedRange={rangeHighlighted ? range : null} onUserZoom={handleUserZoom} />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>No data available</span>

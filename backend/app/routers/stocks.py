@@ -26,6 +26,11 @@ RANGE_DEFAULT_RESOLUTION = {
     "6M": "120", "1Y": "D", "5Y": "W", "ALL": "M",
 }
 
+RESOLUTION_MIN_FETCH_DAYS = {
+    "1": 30, "5": 90, "15": 180, "30": 365,
+    "60": 730, "120": 730, "D": 5475, "W": 5475, "M": 15000,
+}
+
 
 def _resample_ohlcv(candles: list[dict], rule: str) -> list[dict]:
     if not candles:
@@ -54,7 +59,8 @@ async def get_stock_chart(
     chart_limiter.check()
     if resolution not in VALID_RESOLUTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid resolution: {resolution}")
-    days = RANGE_DAYS[range]
+    range_days = RANGE_DAYS[range]
+    days = max(range_days, RESOLUTION_MIN_FETCH_DAYS.get(resolution, range_days))
 
     is_intraday = resolution in INTRADAY_RESOLUTIONS
     fyers_resolution = resolution
