@@ -214,6 +214,17 @@ export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: L
             {group.mapping_status === "verified" && (
               <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
             )}
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); navigate(`/stock/${group.ticker}`) } }}
+              className="shrink-0 p-1 flex items-center justify-center cursor-pointer transition-colors rounded-md"
+              style={colorAccent}
+              aria-label={`View ${group.ticker} chart`}
+            >
+              <BarChart3 size={13} strokeWidth={2} />
+            </span>
             {isUnmatched && (
               <span
                 className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
@@ -246,14 +257,6 @@ export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: L
                 ≥10% Profit
               </span>
             )}
-          </button>
-          <button
-            onClick={() => navigate(`/stock/${group.ticker}`)}
-            className="shrink-0 p-1 flex items-center justify-center cursor-pointer transition-colors rounded-md"
-            style={colorAccent}
-            aria-label={`View ${group.ticker} chart`}
-          >
-            <BarChart3 size={13} strokeWidth={2} />
           </button>
         </div>
         <div className="flex items-center gap-6 text-right shrink-0">
@@ -353,6 +356,17 @@ export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: L
               {group.mapping_status === "verified" && (
                 <CheckCircle2 size={12} strokeWidth={2.5} style={colorProfit} className="shrink-0" />
               )}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); navigate(`/stock/${group.ticker}`) }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); navigate(`/stock/${group.ticker}`) } }}
+                className="shrink-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors rounded-md"
+                style={colorAccent}
+                aria-label={`View ${group.ticker} chart`}
+              >
+                <BarChart3 size={13} strokeWidth={2} />
+              </span>
               {isUnmatched && (
                 <span
                   className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0"
@@ -362,14 +376,6 @@ export const LotGroup = memo(function LotGroup({ group, memberId, onRefresh }: L
                   Unmatched
                 </span>
               )}
-            </button>
-            <button
-              onClick={() => navigate(`/stock/${group.ticker}`)}
-              className="shrink-0 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors rounded-md"
-              style={colorAccent}
-              aria-label={`View ${group.ticker} chart`}
-            >
-              <BarChart3 size={13} strokeWidth={2} />
             </button>
           </div>
 
