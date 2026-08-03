@@ -119,11 +119,12 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
         borderColor: colors.border,
         timeVisible: isIntraday,
         secondsVisible: false,
-        fixLeftEdge: true,
+        fixLeftEdge: false,
         fixRightEdge: true,
+        minBarSpacing: 0.5,
       },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     })
 
     // --- Main pane: Candlesticks ---
