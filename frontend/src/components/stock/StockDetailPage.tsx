@@ -29,7 +29,7 @@ const RANGE_DEFAULT_RESOLUTION: Record<ChartRange, ChartResolution> = {
   "5D": "15",
   "1M": "30",
   "3M": "60",
-  "6M": "D",
+  "6M": "120",
   "1Y": "D",
   "5Y": "W",
   "ALL": "M",
@@ -40,7 +40,7 @@ const RANGE_ALLOWED_RESOLUTIONS: Record<ChartRange, ChartResolution[]> = {
   "5D": ["5", "15", "30", "60"],
   "1M": ["15", "30", "60", "D"],
   "3M": ["30", "60", "D"],
-  "6M": ["60", "D", "W"],
+  "6M": ["60", "120", "D", "W"],
   "1Y": ["D", "W"],
   "5Y": ["D", "W", "M"],
   "ALL": ["W", "M"],
@@ -124,7 +124,6 @@ function IndicatorPanel({
   const [expanded, setExpanded] = useState(false)
   const overlays = INDICATORS.filter(i => i.group === "overlay")
   const oscillators = INDICATORS.filter(i => i.group === "oscillator")
-  const volumes = INDICATORS.filter(i => i.group === "volume")
 
   return (
     <div className="mb-3">
@@ -199,7 +198,6 @@ function IndicatorPanel({
           }}
         >
           <IndicatorGroup label="Overlays" items={overlays} active={active} onToggle={onToggle} />
-          <IndicatorGroup label="Volume" items={volumes} active={active} onToggle={onToggle} />
           <IndicatorGroup label="Oscillators" items={oscillators} active={active} onToggle={onToggle} />
         </div>
       )}
@@ -258,7 +256,7 @@ export function StockDetailPage() {
   const [quote, setQuote] = useState<StockQuote | null>(null)
   const [candles, setCandles] = useState<StockCandle[]>([])
   const [chartResolution, setChartResolution] = useState("")
-  const [resolution, setResolution] = useState<ChartResolution>("D")
+  const [resolution, setResolution] = useState<ChartResolution>("120")
   const [range, setRange] = useState<ChartRange>("6M")
   const [chartLoading, setChartLoading] = useState(true)
   const [quoteLoading, setQuoteLoading] = useState(true)

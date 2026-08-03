@@ -209,7 +209,7 @@ export function computeVWAP(candles: StockCandle[]): IndicatorPoint[] {
   return result
 }
 
-export type IndicatorId = "ema20" | "ema50" | "ema100" | "ema200" | "bollinger" | "vwap" | "rsi" | "macd" | "volume"
+export type IndicatorId = "ema20" | "ema50" | "ema100" | "ema200" | "bollinger" | "vwap" | "rsi" | "macd"
 
 export interface IndicatorConfig {
   id: IndicatorId
@@ -227,7 +227,6 @@ export const INDICATORS: IndicatorConfig[] = [
   { id: "ema200", label: "EMA 200", shortLabel: "EMA200", group: "overlay", color: "#8B5CF6", description: "200-day exponential moving average" },
   { id: "bollinger", label: "Bollinger Bands", shortLabel: "BB", group: "overlay", color: "#6366F1", description: "20-period bands with 2x std deviation" },
   { id: "vwap", label: "VWAP", shortLabel: "VWAP", group: "overlay", color: "#F97316", description: "Volume weighted average price" },
-  { id: "volume", label: "Volume", shortLabel: "Vol", group: "volume", color: "#64748B", description: "Trading volume bars" },
   { id: "rsi", label: "RSI (14)", shortLabel: "RSI", group: "oscillator", color: "#A855F7", description: "Relative strength index, 14-period" },
   { id: "macd", label: "MACD (12,26,9)", shortLabel: "MACD", group: "oscillator", color: "#10B981", description: "Moving avg convergence divergence" },
 ]
@@ -239,7 +238,7 @@ export function loadSavedIndicators(): Set<IndicatorId> {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) return new Set(JSON.parse(saved))
   } catch { /* ignore */ }
-  return new Set(["volume"])
+  return new Set()
 }
 
 export function saveIndicators(active: Set<IndicatorId>): void {

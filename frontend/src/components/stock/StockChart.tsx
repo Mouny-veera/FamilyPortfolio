@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react"
+import { useEffect, useRef, useCallback, useState } from "react"
 import {
   createChart,
   CandlestickSeries,
@@ -12,6 +12,7 @@ import {
   type LineData,
   type Time,
 } from "lightweight-charts"
+import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react"
 import type { StockCandle } from "@/lib/api"
 import {
   type IndicatorId,
@@ -28,6 +29,16 @@ interface StockChartProps {
   candles: StockCandle[]
   resolution: string
   activeIndicators: Set<IndicatorId>
+}
+
+interface OHLCVData {
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  change: number
+  changePct: number
 }
 
 function isDark() {
@@ -71,11 +82,61 @@ function getIndicatorColor(id: IndicatorId): string {
   return INDICATORS.find(i => i.id === id)?.color ?? "#94A3B8"
 }
 
+function formatLegendNum(v: number): string {
+  return v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatLegendVol(v: number): string {
+  if (v >= 10_000_000) return `${(v / 10_000_000).toFixed(2)} Cr`
+  if (v >= 100_000) return `${(v / 100_000).toFixed(2)} L`
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)} K`
+  return v.toLocaleString("en-IN")
+}
+
 export function StockChart({ candles, resolution, activeIndicators }: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
+  const [ohlcv, setOhlcv] = useState<OHLCVData | null>(null)
 
   const isIntraday = ["1", "5", "15", "30", "60", "120"].includes(resolution)
+
+  const lastCandle = candles.length > 0 ? candles[candles.length - 1] : null
+  const displayData = ohlcv || (lastCandle ? {
+    open: lastCandle.open,
+    high: lastCandle.high,
+    low: lastCandle.low,
+    close: lastCandle.close,
+    volume: lastCandle.volume,
+    change: lastCandle.close - lastCandle.open,
+    changePct: lastCandle.open !== 0 ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100 : 0,
+  } : null)
+
+  const handleZoomIn = useCallback(() => {
+    if (!chartRef.current) return
+    const ts = chartRef.current.timeScale()
+    const range = ts.getVisibleLogicalRange()
+    if (!range) return
+    const center = (range.from + range.to) / 2
+    const halfSpan = (range.to - range.from) / 2
+    const newHalf = halfSpan * 0.7
+    ts.setVisibleLogicalRange({ from: center - newHalf, to: center + newHalf })
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    if (!chartRef.current) return
+    const ts = chartRef.current.timeScale()
+    const range = ts.getVisibleLogicalRange()
+    if (!range) return
+    const center = (range.from + range.to) / 2
+    const halfSpan = (range.to - range.from) / 2
+    const newHalf = halfSpan * 1.4
+    ts.setVisibleLogicalRange({ from: center - newHalf, to: center + newHalf })
+  }, [])
+
+  const handleReset = useCallback(() => {
+    if (!chartRef.current) return
+    chartRef.current.timeScale().fitContent()
+  }, [])
 
   const buildChart = useCallback(() => {
     if (!containerRef.current || candles.length === 0) return
@@ -90,7 +151,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
 
     const hasRSI = activeIndicators.has("rsi")
     const hasMACD = activeIndicators.has("macd")
-    const hasVolume = activeIndicators.has("volume")
 
     const chart = createChart(containerRef.current, {
       layout: {
@@ -110,9 +170,10 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       },
       rightPriceScale: {
         borderColor: colors.border,
+        autoScale: true,
         scaleMargins: {
           top: 0.05,
-          bottom: hasVolume ? 0.2 : 0.05,
+          bottom: 0.2,
         },
       },
       timeScale: {
@@ -145,23 +206,41 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       } as CandlestickData<Time>))
     )
 
-    // --- Volume on main pane ---
-    if (hasVolume) {
-      const volSeries = chart.addSeries(HistogramSeries, {
-        priceFormat: { type: "volume" },
-        priceScaleId: "vol",
-      })
-      volSeries.priceScale().applyOptions({
-        scaleMargins: { top: 0.85, bottom: 0 },
-      })
-      volSeries.setData(
-        candles.map(c => ({
-          time: c.time as Time,
-          value: c.volume,
-          color: c.close >= c.open ? colors.volUp : colors.volDown,
-        } as HistogramData<Time>))
-      )
-    }
+    // --- Volume (always visible) ---
+    const volSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "vol",
+    })
+    volSeries.priceScale().applyOptions({
+      scaleMargins: { top: 0.85, bottom: 0 },
+    })
+    volSeries.setData(
+      candles.map(c => ({
+        time: c.time as Time,
+        value: c.volume,
+        color: c.close >= c.open ? colors.volUp : colors.volDown,
+      } as HistogramData<Time>))
+    )
+
+    // --- OHLCV crosshair legend ---
+    chart.subscribeCrosshairMove((param) => {
+      if (!param || !param.time || !param.seriesData) {
+        setOhlcv(null)
+        return
+      }
+      const candleData = param.seriesData.get(candleSeries) as CandlestickData<Time> | undefined
+      if (candleData && "open" in candleData) {
+        setOhlcv({
+          open: candleData.open,
+          high: candleData.high,
+          low: candleData.low,
+          close: candleData.close,
+          volume: (param.seriesData.get(volSeries) as HistogramData<Time> | undefined)?.value ?? 0,
+          change: candleData.close - candleData.open,
+          changePct: candleData.open !== 0 ? ((candleData.close - candleData.open) / candleData.open) * 100 : 0,
+        })
+      }
+    })
 
     // --- Overlay indicators on main pane ---
     if (activeIndicators.has("ema20") && candles.length >= 20) {
@@ -212,7 +291,6 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
       })
       rsiSeries.setData(toLineData(rsiData))
 
-      // 70/30 reference lines
       const overbought = rsiData.map(p => ({ time: p.time as Time, value: 70 }))
       const oversold = rsiData.map(p => ({ time: p.time as Time, value: 30 }))
       const ob = rsiPane.addSeries(LineSeries, { color: colors.downColor, lineWidth: 1, lineStyle: 2, lastValueVisible: false, priceLineVisible: false })
@@ -286,11 +364,90 @@ export function StockChart({ candles, resolution, activeIndicators }: StockChart
     }
   }, [buildChart])
 
+  const isUp = displayData ? displayData.close >= displayData.open : true
+
   return (
-    <div
-      ref={containerRef}
-      className="w-full"
-      style={{ height: "100%", minHeight: 300 }}
-    />
+    <div className="relative w-full" style={{ height: "100%", minHeight: 300 }}>
+      {/* OHLCV Legend */}
+      {displayData && (
+        <div
+          className="absolute top-2 left-2 z-10 flex items-center gap-3 px-2.5 py-1.5 rounded-lg font-mono tabular-nums text-[11px]"
+          style={{
+            backgroundColor: "rgba(var(--bg-card-rgb, 0,0,0), 0.75)",
+            backdropFilter: "blur(8px)",
+            color: "var(--text-secondary)",
+            pointerEvents: "none",
+          }}
+        >
+          <span>
+            O <span style={{ color: isUp ? "var(--color-profit)" : "var(--color-loss)" }}>{formatLegendNum(displayData.open)}</span>
+          </span>
+          <span>
+            H <span style={{ color: isUp ? "var(--color-profit)" : "var(--color-loss)" }}>{formatLegendNum(displayData.high)}</span>
+          </span>
+          <span>
+            L <span style={{ color: isUp ? "var(--color-profit)" : "var(--color-loss)" }}>{formatLegendNum(displayData.low)}</span>
+          </span>
+          <span>
+            C <span style={{ color: isUp ? "var(--color-profit)" : "var(--color-loss)" }}>{formatLegendNum(displayData.close)}</span>
+          </span>
+          <span style={{ color: isUp ? "var(--color-profit)" : "var(--color-loss)" }}>
+            {displayData.change >= 0 ? "+" : ""}{formatLegendNum(displayData.change)} ({displayData.changePct >= 0 ? "+" : ""}{displayData.changePct.toFixed(2)}%)
+          </span>
+          <span style={{ color: "var(--text-muted)" }}>
+            Vol {formatLegendVol(displayData.volume)}
+          </span>
+        </div>
+      )}
+
+      {/* Zoom Controls */}
+      <div
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-1.5 py-1 rounded-lg"
+        style={{
+          backgroundColor: "rgba(var(--bg-card-rgb, 0,0,0), 0.75)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid var(--border-subtle)",
+        }}
+      >
+        <button
+          onClick={handleZoomOut}
+          className="p-1.5 rounded-md transition-colors cursor-pointer"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+          aria-label="Zoom out"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <button
+          onClick={handleZoomIn}
+          className="p-1.5 rounded-md transition-colors cursor-pointer"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+          aria-label="Zoom in"
+        >
+          <ZoomIn size={14} />
+        </button>
+        <div style={{ width: 1, height: 16, backgroundColor: "var(--border-subtle)" }} />
+        <button
+          onClick={handleReset}
+          className="p-1.5 rounded-md transition-colors cursor-pointer"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--text-primary)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+          aria-label="Reset zoom"
+        >
+          <Maximize2 size={14} />
+        </button>
+      </div>
+
+      {/* Chart */}
+      <div
+        ref={containerRef}
+        className="w-full"
+        style={{ height: "100%", minHeight: 300 }}
+      />
+    </div>
   )
 }

@@ -23,7 +23,7 @@ INTRADAY_RESOLUTIONS = {"1", "5", "15", "30", "60", "120"}
 
 RANGE_DEFAULT_RESOLUTION = {
     "1D": "5", "5D": "15", "1M": "30", "3M": "60",
-    "6M": "D", "1Y": "D", "5Y": "W", "ALL": "M",
+    "6M": "120", "1Y": "D", "5Y": "W", "ALL": "M",
 }
 
 
