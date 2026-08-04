@@ -63,5 +63,7 @@ Frontend proxies `/api/*` to `http://localhost:8000` via Vite config.
 
 - EOD Excel export (per-member files matching existing format)
 - Import other family members' Excel files (Veerakumar, Sneeha, Mani, Devi)
-- Telegram push alerts (≥10% profit threshold)
 - Scanner badge on held stocks matching scanner results
+
+Out of scope: Telegram push alerts. The ≥10% threshold stays an in-app signal
+(Alerts page, badges, green-tinted rows) — no external push channel.

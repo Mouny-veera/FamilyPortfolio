@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell, Send, TrendingUp, ChevronRight, User } from "lucide-react"
+import { Bell, TrendingUp, ChevronRight, User } from "lucide-react"
 import { api, type Alert } from "@/lib/api"
 import { formatCurrency, formatPct, formatNumber } from "@/lib/utils"
 import { cn } from "@/lib/utils"
@@ -365,18 +365,6 @@ export function AlertsPage() {
           <p className="text-[13px] max-w-xs mx-auto" style={{ color: "var(--text-muted)" }}>
             Holdings at 10%+ aggregated profit will appear here automatically when prices update.
           </p>
-
-          <div
-            className="inline-flex items-center gap-2 mt-6 px-3.5 py-2 rounded-lg text-[12px] font-medium"
-            style={{
-              backgroundColor: "var(--bg-elevated)",
-              border: "1px solid var(--border-subtle)",
-              color: "var(--text-muted)",
-            }}
-          >
-            <Send size={13} strokeWidth={1.5} />
-            Telegram push notifications — coming soon
-          </div>
         </div>
       ) : (
         <div>
