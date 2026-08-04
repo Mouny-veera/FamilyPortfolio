@@ -105,11 +105,39 @@ const RANGE_SECONDS: Record<string, number> = {
   "5Y": 1825 * 86400,
 }
 
+// Index of the first candle inside `range`, or null when the range covers all data.
+function rangeStartIndex(candles: StockCandle[], range: string | null | undefined): number | null {
+  if (!range || range === "ALL" || !RANGE_SECONDS[range] || candles.length < 2) return null
+  const targetStart = candles[candles.length - 1].time - RANGE_SECONDS[range]
+  const idx = candles.findIndex(c => c.time >= targetStart)
+  if (idx <= 0 || idx >= candles.length - 1) return null
+  return idx
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
 export function StockChart({ candles, resolution, activeIndicators, selectedRange, onUserZoom }: StockChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const [ohlcv, setOhlcv] = useState<OHLCVData | null>(null)
-  const isProgrammaticZoom = useRef(false)
+
+  // Latest-value refs so zooming never changes buildChart's identity — otherwise
+  // the first zoom would tear the chart down and rebuild it mid-gesture.
+  const selectedRangeRef = useRef(selectedRange)
+  const onUserZoomRef = useRef(onUserZoom)
+  const candlesRef = useRef(candles)
+  selectedRangeRef.current = selectedRange
+  onUserZoomRef.current = onUserZoom
+  candlesRef.current = candles
+
+  // Guards for the visible-range subscription: suppress while we drive the range
+  // ourselves, and notify the parent only once per gesture. Time-based because
+  // the library dispatches range changes asynchronously.
+  // Notify the parent at most once per gesture; re-armed whenever we apply a range.
+  const notified = useRef(false)
+  const gestureCleanup = useRef<(() => void) | null>(null)
 
   const isIntraday = ["1", "5", "15", "30", "60", "120"].includes(resolution)
 
@@ -124,36 +152,78 @@ export function StockChart({ candles, resolution, activeIndicators, selectedRang
     changePct: lastCandle.open !== 0 ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100 : 0,
   } : null)
 
-  const handleZoomIn = useCallback(() => {
-    if (!chartRef.current) return
-    const ts = chartRef.current.timeScale()
-    const range = ts.getVisibleLogicalRange()
-    if (!range) return
-    const center = (range.from + range.to) / 2
-    const halfSpan = (range.to - range.from) / 2
-    const newHalf = halfSpan * 0.7
-    ts.setVisibleLogicalRange({ from: center - newHalf, to: center + newHalf })
+  // Apply a range without tearing the chart down. Suppressed so it doesn't
+  // register as a user zoom.
+  const applyRange = useCallback((chart: IChartApi, data: StockCandle[], range: string | null | undefined) => {
+    const ts = chart.timeScale()
+    notified.current = false
+    const idx = rangeStartIndex(data, range)
+    if (idx === null) {
+      ts.fitContent()
+    } else {
+      ts.setVisibleLogicalRange({ from: idx, to: data.length - 1 })
+    }
   }, [])
 
-  const handleZoomOut = useCallback(() => {
-    if (!chartRef.current) return
-    const ts = chartRef.current.timeScale()
+  // A range button is "active" until the user actually manipulates the chart.
+  // Driven off real input events rather than visible-range changes — the library
+  // emits those while it settles (autoscale, rightOffset, resize), which is
+  // indistinguishable from a gesture after the fact.
+  const notifyUserGesture = useCallback(() => {
+    if (notified.current) return
+    notified.current = true
+    onUserZoomRef.current?.()
+  }, [])
+
+  // Geometric zoom animation. TradingView's zoom is multiplicative — measured at
+  // R²=0.996 for a constant ratio per frame — so interpolate the factor in log
+  // space rather than linearly.
+  const animateZoom = useCallback((factor: number) => {
+    const ts = chartRef.current?.timeScale()
+    if (!ts) return
     const range = ts.getVisibleLogicalRange()
     if (!range) return
     const center = (range.from + range.to) / 2
-    const halfSpan = (range.to - range.from) / 2
-    const newHalf = halfSpan * 1.4
-    ts.setVisibleLogicalRange({ from: center - newHalf, to: center + newHalf })
+    const startHalf = (range.to - range.from) / 2
+
+    if (prefersReducedMotion()) {
+      const half = startHalf * factor
+      ts.setVisibleLogicalRange({ from: center - half, to: center + half })
+      return
+    }
+
+    const t0 = performance.now()
+    const DURATION = 180
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / DURATION)
+      const eased = 1 - Math.pow(1 - p, 3)
+      const half = startHalf * Math.pow(factor, eased)
+      ts.setVisibleLogicalRange({ from: center - half, to: center + half })
+      if (p < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
   }, [])
+
+  const handleZoomIn = useCallback(() => {
+    notifyUserGesture()
+    animateZoom(0.7)
+  }, [animateZoom, notifyUserGesture])
+
+  const handleZoomOut = useCallback(() => {
+    notifyUserGesture()
+    animateZoom(1.4)
+  }, [animateZoom, notifyUserGesture])
 
   const handleReset = useCallback(() => {
     if (!chartRef.current) return
-    chartRef.current.timeScale().fitContent()
-  }, [])
+    applyRange(chartRef.current, candlesRef.current, selectedRangeRef.current)
+  }, [applyRange])
 
   const buildChart = useCallback(() => {
     if (!containerRef.current || candles.length === 0) return
 
+    gestureCleanup.current?.()
+    gestureCleanup.current = null
     if (chartRef.current) {
       chartRef.current.remove()
       chartRef.current = null
@@ -194,11 +264,27 @@ export function StockChart({ candles, resolution, activeIndicators, selectedRang
         timeVisible: isIntraday,
         secondsVisible: false,
         fixLeftEdge: false,
-        fixRightEdge: true,
+        // Let the view run past the last candle the way TradingView does — a
+        // pinned right edge makes zoom and pan feel like they hit a wall.
+        fixRightEdge: false,
+        rightOffset: 12,
         minBarSpacing: 0.5,
       },
-      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
-      handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      // deltaY (vertical scroll / pinch) zooms, deltaX (two-finger horizontal
+      // swipe) pans. handleScroll.mouseWheel was false, so trackpad panning was
+      // dead and every gesture came through as a zoom.
+      handleScale: {
+        mouseWheel: true,
+        pinch: true,
+        axisPressedMouseMove: true,
+        axisDoubleClickReset: true,
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: false,
+      },
     })
 
     // --- Main pane: Candlesticks ---
@@ -342,46 +428,63 @@ export function StockChart({ candles, resolution, activeIndicators, selectedRang
       signalLine.setData(toLineData(macdData.signal))
     }
 
-    // Set initial visible range based on selected range, or fitContent for ALL
-    chart.timeScale().fitContent()
-    isProgrammaticZoom.current = true
-    if (selectedRange && selectedRange !== "ALL" && RANGE_SECONDS[selectedRange] && candles.length > 1) {
-      const lastTime = candles[candles.length - 1].time
-      const targetStart = lastTime - RANGE_SECONDS[selectedRange]
-      const startIdx = candles.findIndex(c => c.time >= targetStart)
-      if (startIdx >= 0 && startIdx < candles.length - 1) {
-        requestAnimationFrame(() => {
-          chart.timeScale().setVisibleLogicalRange({ from: startIdx, to: candles.length - 1 })
-          setTimeout(() => { isProgrammaticZoom.current = false }, 50)
-        })
-      } else {
-        setTimeout(() => { isProgrammaticZoom.current = false }, 50)
-      }
-    } else {
-      setTimeout(() => { isProgrammaticZoom.current = false }, 50)
-    }
+    applyRange(chart, candles, selectedRangeRef.current)
 
-    // Deselect range buttons when user zooms/pans
-    if (onUserZoom) {
-      chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-        if (!isProgrammaticZoom.current) {
-          onUserZoom()
-        }
-      })
+    // Wheel = zoom or pan. Pointer counts only once it moves past a small
+    // threshold, so a click or crosshair hover doesn't deselect the range.
+    const el = containerRef.current
+    let dragging = false
+    let startX = 0
+    let startY = 0
+    const onWheel = () => notifyUserGesture()
+    const onPointerDown = (e: PointerEvent) => {
+      dragging = true
+      startX = e.clientX
+      startY = e.clientY
+    }
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging) return
+      if (Math.abs(e.clientX - startX) > 4 || Math.abs(e.clientY - startY) > 4) {
+        dragging = false
+        notifyUserGesture()
+      }
+    }
+    const endDrag = () => { dragging = false }
+    el.addEventListener("wheel", onWheel, { passive: true })
+    el.addEventListener("pointerdown", onPointerDown)
+    el.addEventListener("pointermove", onPointerMove)
+    window.addEventListener("pointerup", endDrag)
+
+    gestureCleanup.current = () => {
+      el.removeEventListener("wheel", onWheel)
+      el.removeEventListener("pointerdown", onPointerDown)
+      el.removeEventListener("pointermove", onPointerMove)
+      window.removeEventListener("pointerup", endDrag)
     }
 
     chartRef.current = chart
-  }, [candles, resolution, isIntraday, activeIndicators, selectedRange, onUserZoom])
+  }, [candles, resolution, isIntraday, activeIndicators, applyRange, notifyUserGesture])
+
+  // Re-apply the range when the user picks one, without rebuilding the chart.
+  useEffect(() => {
+    if (!chartRef.current || !selectedRange) return
+    applyRange(chartRef.current, candlesRef.current, selectedRange)
+  }, [selectedRange, applyRange])
 
   useEffect(() => {
     buildChart()
 
     const ro = new ResizeObserver(() => {
-      if (chartRef.current && containerRef.current) {
-        chartRef.current.applyOptions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        })
+      if (!chartRef.current || !containerRef.current) return
+      chartRef.current.applyOptions({
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
+      })
+      // A width change keeps bar spacing and so reveals more bars — re-pin the
+      // selected range, and keep it from registering as a user zoom. If the user
+      // has already zoomed (no selected range) their view is left alone.
+      if (selectedRangeRef.current) {
+        applyRange(chartRef.current, candlesRef.current, selectedRangeRef.current)
       }
     })
     if (containerRef.current) ro.observe(containerRef.current)
@@ -397,6 +500,8 @@ export function StockChart({ candles, resolution, activeIndicators, selectedRang
       mq.removeEventListener("change", themeChange)
       mo.disconnect()
       ro.disconnect()
+      gestureCleanup.current?.()
+      gestureCleanup.current = null
       if (chartRef.current) {
         chartRef.current.remove()
         chartRef.current = null

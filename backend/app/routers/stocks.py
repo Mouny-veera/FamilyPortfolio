@@ -1,5 +1,7 @@
 import asyncio
+import time
 import traceback
+from collections import OrderedDict
 from datetime import date, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
@@ -26,10 +28,139 @@ RANGE_DEFAULT_RESOLUTION = {
     "6M": "120", "1Y": "D", "5Y": "W", "ALL": "M",
 }
 
+# How much history to fetch per resolution, independent of the displayed range,
+# so zooming out always has candles to reveal. Sized to keep each response near
+# ~3k candles: an NSE session is 6.25h, so candles/trading-day is 375 at "1",
+# 75 at "5", 25 at "15", 13 at "30", 7 at "60", ~3.5 at "120".
 RESOLUTION_MIN_FETCH_DAYS = {
-    "1": 30, "5": 90, "15": 180, "30": 365,
-    "60": 730, "120": 730, "D": 5475, "W": 5475, "M": 15000,
+    "1": 20, "5": 90, "15": 270, "30": 545,
+    "60": 1095, "120": 1095, "D": 5475, "W": 7300, "M": 15000,
 }
+
+# Fyers degrades to daily candles when an intraday range is too wide, so request
+# in chunks and stitch. Concurrency is capped to stay under the rate limit.
+FYERS_INTRADAY_CHUNK_DAYS = 100
+FYERS_MAX_CONCURRENT = 4
+
+# Chart responses are expensive to build (many upstream calls); cache briefly.
+CHART_CACHE_TTL_SECONDS = 90
+CHART_CACHE_MAX_ENTRIES = 200
+_chart_cache: "OrderedDict[tuple[str, str, str], tuple[float, dict]]" = OrderedDict()
+
+
+def _cache_get(key: tuple[str, str, str]) -> dict | None:
+    hit = _chart_cache.get(key)
+    if not hit:
+        return None
+    ts, payload = hit
+    if time.monotonic() - ts > CHART_CACHE_TTL_SECONDS:
+        _chart_cache.pop(key, None)
+        return None
+    _chart_cache.move_to_end(key)
+    return payload
+
+
+def _cache_put(key: tuple[str, str, str], payload: dict) -> None:
+    _chart_cache[key] = (time.monotonic(), payload)
+    _chart_cache.move_to_end(key)
+    while len(_chart_cache) > CHART_CACHE_MAX_ENTRIES:
+        _chart_cache.popitem(last=False)
+
+
+# yfinance intraday fallback, used when Fyers is unavailable (e.g. expired token).
+# Without an explicit interval yfinance returns daily bars, which is why the chart
+# used to show daily candles on every intraday resolution. Yahoo caps how far back
+# each interval goes.
+YF_INTERVAL = {"1": "1m", "5": "5m", "15": "15m", "30": "30m", "60": "60m", "120": "60m"}
+YF_INTERVAL_MAX_DAYS = {"1m": 7, "5m": 59, "15m": 59, "30m": 59, "60m": 729}
+
+
+async def _yfinance_intraday_candles(
+    ticker: str, resolution: str, days: int
+) -> tuple[list[dict], str] | None:
+    """Return (candles, actual_resolution) from yfinance, or None."""
+    interval = YF_INTERVAL.get(resolution)
+    if not interval:
+        return None
+    lookback = min(days, YF_INTERVAL_MAX_DAYS[interval])
+
+    import yfinance as yf
+
+    def _fetch():
+        return yf.Ticker(f"{ticker}.NS").history(period=f"{lookback}d", interval=interval)
+
+    try:
+        df = await asyncio.to_thread(_fetch)
+    except Exception as e:
+        logger.warning("yfinance intraday %s @%s failed: %s", ticker, interval, e)
+        return None
+    if df is None or df.empty:
+        return None
+
+    df = df.dropna(subset=["Open", "High", "Low", "Close"])
+    if df.empty:
+        return None
+
+    # 2h isn't a Yahoo interval — build it from 60m. Anchoring on the first bar
+    # keeps buckets on the 09:15 session open (a day is a whole number of 2h bins).
+    actual = resolution
+    if resolution == "120":
+        df = df.resample("2h", origin="start").agg(
+            {"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}
+        ).dropna(subset=["Open"])
+        if df.empty:
+            return None
+
+    candles = [
+        {
+            "time": int(ts.timestamp()),
+            "open": round(float(r["Open"]), 2),
+            "high": round(float(r["High"]), 2),
+            "low": round(float(r["Low"]), 2),
+            "close": round(float(r["Close"]), 2),
+            "volume": int(r["Volume"]) if r["Volume"] == r["Volume"] else 0,
+        }
+        for ts, r in df.iterrows()
+    ]
+    return (candles, actual) if candles else None
+
+
+async def _fyers_history_chunked(provider, symbol: str, resolution: str, start: date, end: date) -> list:
+    """Fetch Fyers history in <=100-day windows and merge, de-duped by timestamp."""
+    windows = []
+    cur = start
+    while cur <= end:
+        nxt = min(cur + timedelta(days=FYERS_INTRADAY_CHUNK_DAYS - 1), end)
+        windows.append((cur, nxt))
+        cur = nxt + timedelta(days=1)
+
+    sem = asyncio.Semaphore(FYERS_MAX_CONCURRENT)
+
+    async def fetch(a: date, b: date):
+        data = {
+            "symbol": symbol,
+            "resolution": resolution,
+            "date_format": "1",
+            "range_from": a.isoformat(),
+            "range_to": b.isoformat(),
+            "cont_flag": "1",
+        }
+        async with sem:
+            return await asyncio.to_thread(provider._fyers.history, data=data)
+
+    results = await asyncio.gather(*(fetch(a, b) for a, b in windows), return_exceptions=True)
+
+    merged: dict[int, list] = {}
+    failures = 0
+    for r in results:
+        if isinstance(r, Exception):
+            failures += 1
+            continue
+        for c in (r or {}).get("candles") or []:
+            merged[int(c[0])] = c
+    if failures:
+        logger.warning("Fyers: %d/%d chunks failed for %s", failures, len(windows), symbol)
+    return [merged[k] for k in sorted(merged)]
 
 
 def _resample_ohlcv(candles: list[dict], rule: str) -> list[dict]:
@@ -59,6 +190,12 @@ async def get_stock_chart(
     chart_limiter.check()
     if resolution not in VALID_RESOLUTIONS:
         raise HTTPException(status_code=400, detail=f"Invalid resolution: {resolution}")
+
+    cache_key = (ticker.upper(), resolution, range)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     range_days = RANGE_DAYS[range]
     days = max(range_days, RESOLUTION_MIN_FETCH_DAYS.get(resolution, range_days))
 
@@ -74,17 +211,10 @@ async def get_stock_chart(
     if isinstance(provider, FyersProvider) and is_intraday:
         from ..services.nse_master import get_fyers_symbol
         symbol = get_fyers_symbol(ticker) or f"NSE:{ticker}-EQ"
-        data = {
-            "symbol": symbol,
-            "resolution": fyers_resolution,
-            "date_format": "1",
-            "range_from": start.isoformat(),
-            "range_to": end.isoformat(),
-            "cont_flag": "1",
-        }
         try:
-            resp = await asyncio.to_thread(provider._fyers.history, data=data)
-            candles = resp.get("candles")
+            candles = await _fyers_history_chunked(
+                provider, symbol, fyers_resolution, start, end
+            )
             if candles:
                 clean = []
                 for c in candles:
@@ -100,9 +230,21 @@ async def get_stock_chart(
                         "volume": int(vol) if vol == vol else 0,
                     })
                 if clean:
-                    return {"candles": clean, "resolution": fyers_resolution}
+                    payload = {"candles": clean, "resolution": fyers_resolution}
+                    _cache_put(cache_key, payload)
+                    return payload
         except Exception as e:
             logger.error("Fyers intraday error for %s: %s", ticker, e)
+
+    # Fyers unavailable or returned nothing — try real intraday from yfinance
+    # before falling back to daily bars.
+    if is_intraday:
+        yf_result = await _yfinance_intraday_candles(ticker, resolution, days)
+        if yf_result:
+            candles, actual_resolution = yf_result
+            payload = {"candles": candles, "resolution": actual_resolution}
+            _cache_put(cache_key, payload)
+            return payload
 
     try:
         ohlc = await provider.get_historical_ohlc(ticker, start, end)
@@ -170,7 +312,9 @@ async def get_stock_chart(
     elif resolution == "M":
         candles = _resample_ohlcv(candles, "ME")
 
-    return {"candles": candles, "resolution": resolution}
+    payload = {"candles": candles, "resolution": resolution}
+    _cache_put(cache_key, payload)
+    return payload
 
 
 @router.get("/{ticker}/quote")
