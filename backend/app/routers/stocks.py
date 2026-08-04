@@ -32,9 +32,13 @@ RANGE_DEFAULT_RESOLUTION = {
 # so zooming out always has candles to reveal. Sized to keep each response near
 # ~3k candles: an NSE session is 6.25h, so candles/trading-day is 375 at "1",
 # 75 at "5", 25 at "15", 13 at "30", 7 at "60", ~3.5 at "120".
+# Intraday values are advisory: Yahoo hard-caps intraday history at 730 days
+# ("range must be within the last 730 days"), so those windows are clamped in
+# _yfinance_intraday_candles. Daily and above reach full listing history — NSE
+# large caps go back to ~2002, so ask for 25 years rather than 15.
 RESOLUTION_MIN_FETCH_DAYS = {
     "1": 20, "5": 90, "15": 270, "30": 545,
-    "60": 1095, "120": 1095, "D": 5475, "W": 7300, "M": 15000,
+    "60": 1095, "120": 1095, "D": 9200, "W": 9200, "M": 15000,
 }
 
 # Fyers degrades to daily candles when an intraday range is too wide, so request
