@@ -176,7 +176,92 @@ export interface StockQuote {
 export type ChartResolution = "1" | "5" | "15" | "30" | "60" | "120" | "D" | "W" | "M"
 export type ChartRange = "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "5Y" | "ALL"
 
+// --- Excel import ---
+
+export interface ImportRepair {
+  field: string
+  original: string
+  repaired: string
+  note: string
+}
+
+export interface ImportPreviewRow {
+  row_number: number
+  raw_description: string
+  ticker: string | null
+  match_status: "exact" | "alias" | "fuzzy" | "unmatched"
+  candidates: Array<{ symbol?: string; ticker?: string; name?: string }>
+  buy_date: string | null
+  qty: number | null
+  buy_rate: number | null
+  buy_value: number | null
+  sell_date: string | null
+  sell_qty: number | null
+  sell_rate: number | null
+  sell_value: number | null
+  profit_loss: number | null
+  corporate_action: string | null
+  repairs: ImportRepair[]
+}
+
+export interface ImportPreviewSheet {
+  name: string
+  kind: "holdings" | "realized"
+  financial_year: string | null
+  selected: boolean
+  skip_reason: string | null
+  header_row: number | null
+  columns: Record<string, { field: string; index: number; header: string | null; confidence: number; reason: string }>
+  rows: ImportPreviewRow[]
+  skipped: Array<{ row_number: number; reason: string; preview: string }>
+  annotations: Array<{ row_number: number; text: string }>
+}
+
+export interface ImportPreview {
+  member: { id: number; name: string }
+  member_has_data: boolean
+  existing_lots: number
+  existing_realized: number
+  sheets: ImportPreviewSheet[]
+}
+
+export interface ImportCommitRow {
+  ticker: string
+  buy_date: string
+  qty: number
+  buy_rate: number
+  buy_value: number
+  sell_date?: string | null
+  sell_qty?: number | null
+  sell_rate?: number | null
+  sell_value?: number | null
+}
+
+/** Multipart upload — must not carry the JSON Content-Type, the browser sets
+ *  its own boundary. */
+async function upload<T>(path: string, form: FormData): Promise<T> {
+  const headers: Record<string, string> = {}
+  const stored = loadStoredAuth()
+  if (stored?.token) headers["Authorization"] = `Bearer ${stored.token}`
+  const res = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || "Upload failed")
+  }
+  return res.json()
+}
+
 export const api = {
+  previewImport: (memberId: number, file: File) => {
+    const form = new FormData()
+    form.append("file", file)
+    return upload<ImportPreview>(`/import/preview?member_id=${memberId}`, form)
+  },
+  commitImport: (memberId: number, holdings: ImportCommitRow[], realized: ImportCommitRow[]) =>
+    request<{ member: string; lots_imported: number; realized_imported: number }>("/import/commit", {
+      method: "POST",
+      body: JSON.stringify({ member_id: memberId, holdings, realized }),
+    }),
   getMembers: () => request<Member[]>("/members"),
   getMember: (id: number) => request<Member>(`/members/${id}`),
   createMember: (name: string) => request<Member>("/members", { method: "POST", body: JSON.stringify({ name }) }),

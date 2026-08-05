@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 from .database import init_db, async_session
 from .models import Member
-from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth, stocks, fundamentals
+from .routers import members, holdings, dashboard, scanner, settings, nse, alerts, google_auth, stocks, fundamentals, imports
 from .services.price_service import start_polling, stop_polling
 from .services.nse_master import refresh_nse_master_list
 from .services.fyers_auth import ensure_valid_token
@@ -91,6 +91,7 @@ app.include_router(alerts.router)
 app.include_router(google_auth.router)
 app.include_router(stocks.router)
 app.include_router(fundamentals.router)
+app.include_router(imports.router)
 
 
 @app.get("/api/health")

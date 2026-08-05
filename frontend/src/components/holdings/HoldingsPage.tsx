@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useParams } from "react-router-dom"
-import { Plus, Search, X, ArrowUp, ArrowDown, ArrowUpDown, Briefcase } from "lucide-react"
+import { Plus, Search, X, ArrowUp, ArrowDown, ArrowUpDown, Briefcase, FileSpreadsheet } from "lucide-react"
 import { api, type MemberHoldings, type LotGroup as LotGroupType, type RealizedPnL } from "@/lib/api"
 import { formatCurrency, formatPct, formatDate, formatNumber, filterAndSortByTicker } from "@/lib/utils"
 import { MetricCards } from "./MetricCards"
 import { LotGroup } from "./LotGroup"
 import { BuyForm } from "./BuyForm"
+import { ImportDialog } from "./ImportDialog"
 import { PageError } from "@/components/ui/PageError"
 
 const textMuted = { color: "var(--text-muted)" } as const
@@ -192,7 +193,15 @@ function PnLSummary({ data }: { data: RealizedPnL[] }) {
 /** Shown when a member has nothing at all — no lots and no realized trades.
  *  Filtering and sorting controls are meaningless here, so the whole tab and
  *  toolbar scaffolding is replaced by a single next step. */
-function EmptyMemberState({ name, onAddBuy }: { name: string; onAddBuy: () => void }) {
+function EmptyMemberState({
+  name,
+  onAddBuy,
+  onImport,
+}: {
+  name: string
+  onAddBuy: () => void
+  onImport: () => void
+}) {
   return (
     <div className="text-center py-20 rounded-xl" style={dashedBorder}>
       <div
@@ -204,17 +213,28 @@ function EmptyMemberState({ name, onAddBuy }: { name: string; onAddBuy: () => vo
       <p className="text-[14px] font-semibold tracking-tight mb-1" style={textPrimary}>
         No holdings yet
       </p>
-      <p className="text-[13px] max-w-xs mx-auto mb-6" style={textMuted}>
-        {name} has no lots or realized trades recorded. Add a buy to start tracking.
+      <p className="text-[13px] max-w-sm mx-auto mb-6" style={textMuted}>
+        {name} has no lots or realized trades recorded. Import an existing
+        workbook, or add a buy by hand.
       </p>
-      <button
-        onClick={onAddBuy}
-        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
-        style={addBuyButtonStyle}
-      >
-        <Plus size={15} strokeWidth={2} />
-        Add first buy
-      </button>
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        <button
+          onClick={onImport}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
+          style={addBuyButtonStyle}
+        >
+          <FileSpreadsheet size={15} strokeWidth={2} />
+          Import from Excel
+        </button>
+        <button
+          onClick={onAddBuy}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition-colors duration-150"
+          style={{ border: "1px solid var(--border-color)", color: "var(--text-secondary)" }}
+        >
+          <Plus size={15} strokeWidth={2} />
+          Add first buy
+        </button>
+      </div>
     </div>
   )
 }
@@ -226,6 +246,7 @@ export function HoldingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<"active" | "pnl">("active")
   const [showBuy, setShowBuy] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [search, setSearch] = useState("")
 
   const [holdingSort, setHoldingSort] = useState<HoldingSortField>("pnl_pct")
@@ -349,7 +370,11 @@ export function HoldingsPage() {
       </div>
 
       {hasNoData ? (
-        <EmptyMemberState name={data.member.name} onAddBuy={() => setShowBuy(true)} />
+        <EmptyMemberState
+          name={data.member.name}
+          onAddBuy={() => setShowBuy(true)}
+          onImport={() => setShowImport(true)}
+        />
       ) : (
       <>
       <MetricCards summary={data.summary} alertCount={data.holdings.filter((h) => h.unrealized_pnl_pct != null && h.unrealized_pnl_pct >= 10).length} />
@@ -521,6 +546,15 @@ export function HoldingsPage() {
         </div>
       )}
       </>
+      )}
+
+      {showImport && data && (
+        <ImportDialog
+          memberId={id}
+          memberName={data.member.name}
+          onClose={() => setShowImport(false)}
+          onSuccess={fetchData}
+        />
       )}
 
       {showBuy && (
