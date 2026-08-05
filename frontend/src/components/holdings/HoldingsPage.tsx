@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useParams } from "react-router-dom"
-import { Plus, Search, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react"
+import { Plus, Search, X, ArrowUp, ArrowDown, ArrowUpDown, Briefcase } from "lucide-react"
 import { api, type MemberHoldings, type LotGroup as LotGroupType, type RealizedPnL } from "@/lib/api"
 import { formatCurrency, formatPct, formatDate, formatNumber, filterAndSortByTicker } from "@/lib/utils"
 import { MetricCards } from "./MetricCards"
@@ -189,6 +189,36 @@ function PnLSummary({ data }: { data: RealizedPnL[] }) {
   )
 }
 
+/** Shown when a member has nothing at all — no lots and no realized trades.
+ *  Filtering and sorting controls are meaningless here, so the whole tab and
+ *  toolbar scaffolding is replaced by a single next step. */
+function EmptyMemberState({ name, onAddBuy }: { name: string; onAddBuy: () => void }) {
+  return (
+    <div className="text-center py-20 rounded-xl" style={dashedBorder}>
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+        style={{ background: "var(--accent-10)", border: "1px solid var(--accent-15)" }}
+      >
+        <Briefcase size={22} strokeWidth={1.5} style={{ color: "var(--color-accent)" }} />
+      </div>
+      <p className="text-[14px] font-semibold tracking-tight mb-1" style={textPrimary}>
+        No holdings yet
+      </p>
+      <p className="text-[13px] max-w-xs mx-auto mb-6" style={textMuted}>
+        {name} has no lots or realized trades recorded. Add a buy to start tracking.
+      </p>
+      <button
+        onClick={onAddBuy}
+        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:brightness-110"
+        style={addBuyButtonStyle}
+      >
+        <Plus size={15} strokeWidth={2} />
+        Add first buy
+      </button>
+    </div>
+  )
+}
+
 export function HoldingsPage() {
   const { memberId } = useParams<{ memberId: string }>()
   const [data, setData] = useState<MemberHoldings | null>(null)
@@ -250,6 +280,11 @@ export function HoldingsPage() {
     const filtered = filterAndSortByTicker(data.holdings, q)
     return sortHoldings(filtered, holdingSort, holdingSortDir)
   }, [data, q, holdingSort, holdingSortDir])
+
+  // Nothing recorded at all — filtering and sorting have nothing to act on.
+  const hasNoData = data !== null
+    && data.holdings.length === 0
+    && data.realized_pnl.length === 0
 
   const filteredPnl = useMemo(() => {
     if (!data) return []
@@ -313,6 +348,10 @@ export function HoldingsPage() {
         </button>
       </div>
 
+      {hasNoData ? (
+        <EmptyMemberState name={data.member.name} onAddBuy={() => setShowBuy(true)} />
+      ) : (
+      <>
       <MetricCards summary={data.summary} alertCount={data.holdings.filter((h) => h.unrealized_pnl_pct != null && h.unrealized_pnl_pct >= 10).length} />
 
       <div
@@ -342,6 +381,8 @@ export function HoldingsPage() {
         ))}
       </div>
 
+      {/* Only offer filtering on a tab that actually has rows to filter. */}
+      {(tab === "active" ? data.holdings.length > 0 : data.realized_pnl.length > 0) && (
       <div className="relative mb-4">
         <Search
           size={14}
@@ -368,10 +409,13 @@ export function HoldingsPage() {
           </button>
         )}
       </div>
+      )}
 
       {tab === "active" && (
         <div key="active" className="animate-tab-content">
-          <SortChips active={holdingSort} dir={holdingSortDir} onSort={handleHoldingSort} />
+          {data.holdings.length > 0 && (
+            <SortChips active={holdingSort} dir={holdingSortDir} onSort={handleHoldingSort} />
+          )}
           {filteredHoldings.length === 0 ? (
             <div
               className="text-center py-16 rounded-xl"
@@ -475,6 +519,8 @@ export function HoldingsPage() {
           )}
         </div>
         </div>
+      )}
+      </>
       )}
 
       {showBuy && (
