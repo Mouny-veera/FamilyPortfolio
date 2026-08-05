@@ -21,6 +21,7 @@ from app.services.excel_import import (
     parse_date,
     parse_workbook,
     resolve_ticker,
+    select_import_sheets,
 )
 
 # Stub the symbol lookup so tests don't depend on the NSE master being loaded.
@@ -59,9 +60,10 @@ def test_family_layout():
     assert sheet.mapping["qty"].index == 4
     assert sheet.mapping["buy_rate"].index == 5
     assert len(sheet.rows) == 3
-    # The bonus annotation is skipped, and visibly so.
-    assert len(sheet.skipped) == 1
-    assert "corporate action" in sheet.skipped[0].reason
+    # The bonus row isn't a trade, but it explains a quantity change — it is
+    # surfaced as an annotation rather than dropped.
+    assert len(sheet.annotations) == 1
+    assert "BONUS" in sheet.annotations[0].text
     # Company names resolve through the alias table.
     assert [r.match.ticker for r in sheet.rows] == ["RELIANCE", "TATACHEM", "HINDUNILVR"]
 
@@ -128,6 +130,107 @@ def test_rows_missing_required_fields_are_reported_not_silently_dropped():
     assert len(sheet.rows) == 1
     reasons = sorted(s.reason for s in sheet.skipped)
     assert reasons == ["missing quantity or rate", "no description", "unreadable buy date"]
+
+
+def test_typod_dates_are_repaired_and_reported():
+    """Real workbooks carry slips; the rows are valid trades, so recover them."""
+    data = _workbook({"Equity 2026-27": [
+        ["DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value"],
+        ["03/112025", "RELIANCE", 10, 100.0, 1000],      # separator dropped
+        ["30/03/206", "TCS", 5, 200.0, 1000],            # year missing a digit
+        ["10/04/0206", "INFY", 5, 200.0, 1000],          # leading zero + short
+    ]})
+    (sheet,) = parse_workbook(data, resolver=_resolver)
+
+    assert len(sheet.rows) == 3, "no row may be lost to a typo"
+    assert [r.buy_date for r in sheet.rows] == [
+        date(2025, 11, 3), date(2026, 3, 30), date(2026, 4, 10),
+    ]
+    # Every repair is declared so the user confirms rather than trusting us.
+    for row in sheet.rows:
+        assert len(row.repairs) == 1
+        assert row.repairs[0].field == "buy_date"
+
+
+def test_profit_uses_values_not_rates_when_a_bonus_changes_quantity():
+    """A 1:1 bonus doubles the holding, so sell qty diverges from buy qty.
+
+    Bought 20 at 300 (6,000). Bonus makes it 40 shares, sold at 200 (8,000) —
+    a 2,000 profit. Deriving from rates gives (200 - 300) x 20 = -2,000, a loss
+    of the same magnitude with the sign flipped. Only the values are correct.
+    """
+    data = _workbook({"P&L_2025-26": [
+        ["S.No", "DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value",
+         "Sell Date", "Sell Quantity", "Sell Rate", "Sell Value"],
+        [1, date(2024, 11, 21), "TCS", 20, 300.0, 6000,
+         date(2025, 6, 10), 40, 200.0, 8000],
+    ]})
+    (sheet,) = parse_workbook(data, resolver=_resolver)
+    (row,) = sheet.rows
+
+    assert sheet.kind == "realized"
+    assert row.buy_value == 6000
+    assert row.sell_value == 8000
+    assert row.profit_loss == 2000            # not -2000
+    assert row.corporate_action is not None
+    assert "2x" in row.corporate_action
+
+
+def test_holdings_sheet_with_empty_sell_columns_is_not_realized():
+    """Both sheet types declare sell columns; only populated ones count."""
+    data = _workbook({"Equity _2026-27": [
+        ["DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value",
+         "Sell Date", "Sell Quantity", "Sell Rate"],
+        [date(2025, 5, 12), "RELIANCE", 10, 2450.5, 24505, None, None, None],
+        [date(2025, 6, 1), "TCS", 5, 3400.0, 17000, None, None, None],
+    ]})
+    (sheet,) = parse_workbook(data, resolver=_resolver)
+    assert sheet.kind == "holdings"
+
+
+def test_only_the_newest_holdings_sheet_imports():
+    """Holdings sheets restate every open lot, so older ones would duplicate."""
+    rows = [["DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value"],
+            [date(2025, 5, 12), "RELIANCE", 10, 2450.5, 24505]]
+    data = _workbook({
+        "Equity -OLD": rows,
+        " Equity _2025-26": rows,
+        "Equity _2026-27": rows,
+        "P&L_2025-26": [
+            ["DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value",
+             "Sell Date", "Sell Quantity", "Sell Rate", "Sell Value"],
+            [date(2024, 5, 1), "TCS", 5, 3000.0, 15000,
+             date(2025, 6, 1), 5, 3400.0, 17000],
+        ],
+        "P&L_2026-27": [
+            ["DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value",
+             "Sell Date", "Sell Quantity", "Sell Rate", "Sell Value"],
+            [date(2025, 5, 1), "INFY", 5, 1400.0, 7000,
+             date(2026, 6, 1), 5, 1600.0, 8000],
+        ],
+    })
+    previews = select_import_sheets(parse_workbook(data, resolver=_resolver))
+    chosen = {p.name.strip() for p in previews if p.selected}
+
+    assert "Equity _2026-27" in chosen
+    assert "Equity _2025-26" not in chosen
+    assert "Equity -OLD" not in chosen
+    # Realized sheets never overlap, so every one of them imports.
+    assert {"P&L_2025-26", "P&L_2026-27"} <= chosen
+    # And the reason a sheet was dropped is explained, not silent.
+    dropped = [p for p in previews if not p.selected]
+    assert all(p.skip_reason for p in dropped)
+
+
+def test_totals_row_terminates_the_sheet():
+    data = _workbook({"Equity 2026-27": [
+        ["DATE", "Description", "Buy Quantity", "Buy Rate", "Buy Value"],
+        [date(2025, 5, 12), "RELIANCE", 10, 2450.5, 24505],
+        [None, None, None, "INVESTED", 41505],
+        [date(2025, 6, 1), "TCS", 5, 3400.0, 17000],   # after totals: ignored
+    ]})
+    (sheet,) = parse_workbook(data, resolver=_resolver)
+    assert len(sheet.rows) == 1
 
 
 def test_financial_year_boundary():

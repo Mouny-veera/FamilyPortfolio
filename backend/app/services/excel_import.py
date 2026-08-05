@@ -26,8 +26,8 @@ HEADER_SEARCH_ROWS = 25
 TYPE_SAMPLE_ROWS = 40
 
 FIELDS = (
-    "buy_date", "description", "qty", "buy_rate",
-    "sell_date", "sell_qty", "sell_rate",
+    "buy_date", "description", "qty", "buy_rate", "buy_value",
+    "sell_date", "sell_qty", "sell_rate", "sell_value",
 )
 
 # Exact header wording seen across the family workbooks and common Indian broker
@@ -48,7 +48,8 @@ HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
     ),
     "qty": (
         "qty", "quantity", "shares", "units", "no of shares", "buy qty",
-        "purchase qty", "quantity bought", "qty bought",
+        "buy quantity", "purchase qty", "purchase quantity",
+        "quantity bought", "qty bought",
     ),
     "buy_rate": (
         "rate", "price", "buy rate", "buy price", "purchase price", "avg price",
@@ -56,13 +57,24 @@ HEADER_SYNONYMS: dict[str, tuple[str, ...]] = {
         "purchase rate", "acquisition cost",
     ),
     "sell_qty": (
-        "sell qty", "sale qty", "quantity sold", "qty sold", "units sold",
+        "sell qty", "sell quantity", "sale qty", "sale quantity",
+        "quantity sold", "qty sold", "units sold",
     ),
     "sell_rate": (
         "sell rate", "sell price", "sale price", "sale rate", "selling price",
         "sell avg", "realisation price", "realization price",
     ),
+    # Money columns are authoritative — see parse_sheet. A bonus or split makes
+    # sell qty diverge from buy qty, so rates and quantities cannot be trusted
+    # to reconstruct the trade, but the rupee values always reconcile.
+    "buy_value": ("buy value", "purchase value", "invested", "cost value",
+                  "buy amount", "purchase amount", "investment"),
+    "sell_value": ("sell value", "sale value", "sell amount", "sale amount",
+                   "realised value", "realized value", "proceeds"),
 }
+
+# The totals line that closes a sheet.
+TERMINATOR_TOKENS = ("invested", "total", "grand total")
 
 # Sheet-name hints for whether a tab holds open positions or closed trades.
 REALIZED_SHEET_HINTS = ("p&l", "pnl", "realized", "realised", "capital gain",
@@ -118,6 +130,14 @@ class TickerMatch:
 
 
 @dataclass
+class DateRepair:
+    field: str
+    original: str
+    repaired: date
+    note: str
+
+
+@dataclass
 class ParsedRow:
     row_number: int
     raw_description: str
@@ -125,9 +145,14 @@ class ParsedRow:
     buy_date: date | None = None
     qty: float | None = None
     buy_rate: float | None = None
+    buy_value: float | None = None
     sell_date: date | None = None
     sell_qty: float | None = None
     sell_rate: float | None = None
+    sell_value: float | None = None
+    profit_loss: float | None = None
+    repairs: list[DateRepair] = dataclass_field(default_factory=list)
+    corporate_action: str | None = None
 
 
 @dataclass
@@ -138,6 +163,13 @@ class SkippedRow:
 
 
 @dataclass
+class Annotation:
+    """A bonus/split note. Not a trade, but it explains a quantity change."""
+    row_number: int
+    text: str
+
+
+@dataclass
 class SheetPreview:
     name: str
     kind: str                       # holdings | realized
@@ -145,6 +177,10 @@ class SheetPreview:
     mapping: dict[str, ColumnGuess]
     rows: list[ParsedRow]
     skipped: list[SkippedRow]
+    annotations: list[Annotation] = dataclass_field(default_factory=list)
+    financial_year: str | None = None
+    selected: bool = True
+    skip_reason: str | None = None
 
 
 def _norm_header(value: Any) -> str:
@@ -180,6 +216,50 @@ def parse_date(value: Any) -> date | None:
             continue
         if 1990 < parsed.year < 2100:
             return parsed
+    return None
+
+
+def repair_date(value: Any, *, plausible_from: int = 2000,
+                plausible_to: int = 2100) -> tuple[date, str] | None:
+    """Recover a date from a typo'd string.
+
+    Real workbooks accumulate slips — a dropped separator, a mistyped year. The
+    rows are otherwise valid trades, so rejecting them loses real holdings.
+    Every repair is reported so the user confirms it rather than trusting us.
+    """
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+
+    parts = [p for p in re.split(r"[/\-.\s]+", text) if p]
+    candidates: list[tuple[str, str]] = []
+
+    # Separator dropped between month and year: "03/112025" -> 03/11/2025
+    if len(parts) == 2 and len(parts[1]) == 6 and parts[1].isdigit():
+        candidates.append((f"{parts[0]}/{parts[1][:2]}/{parts[1][2:]}",
+                           "inserted missing separator"))
+    # Whole date run together: "03112025"
+    if len(parts) == 1 and len(parts[0]) == 8 and parts[0].isdigit():
+        blob = parts[0]
+        candidates.append((f"{blob[:2]}/{blob[2:4]}/{blob[4:]}",
+                           "split run-together digits"))
+    # Year missing a digit: "206"/"0205" -> 2026/2025. Digits are in order with
+    # one dropped, so reinstate it before the final digit.
+    if len(parts) == 3 and parts[2].isdigit():
+        year = parts[2].lstrip("0")
+        if len(year) == 3 and year.startswith("20"):
+            candidates.append((f"{parts[0]}/{parts[1]}/20{year[1]}{year[2]}"
+                               .replace("200", "202", 1),
+                               f"year {parts[2]!r} read as 202{year[2]}"))
+            candidates.append((f"{parts[0]}/{parts[1]}/202{year[2]}",
+                               f"year {parts[2]!r} read as 202{year[2]}"))
+
+    for text_candidate, note in candidates:
+        parsed = parse_date(text_candidate)
+        if parsed and plausible_from <= parsed.year <= plausible_to:
+            return parsed, note
     return None
 
 
@@ -234,11 +314,24 @@ def _match_header_to_field(norm: str) -> tuple[str, float] | None:
     for fld, synonyms in HEADER_SYNONYMS.items():
         if norm in synonyms:
             return fld, 1.0
+
+    # A header that names its side ("Sell Quantity") must not be captured by a
+    # generic token ("quantity") belonging to the other side.
+    sells = norm.startswith(("sell", "sale")) or " sold" in norm
+    buys = norm.startswith(("buy", "purchase")) or " bought" in norm
+
+    best: tuple[str, float] | None = None
+    best_len = 0
     for fld, synonyms in HEADER_SYNONYMS.items():
+        is_sell_field = fld.startswith("sell")
+        if sells and not is_sell_field and fld != "description":
+            continue
+        if buys and is_sell_field:
+            continue
         for syn in synonyms:
-            if len(syn) > 3 and (syn in norm or norm in syn):
-                return fld, 0.65
-    return None
+            if len(syn) > 3 and (syn in norm or norm in syn) and len(syn) > best_len:
+                best, best_len = (fld, 0.65), len(syn)
+    return best
 
 
 def _infer_by_type(column: list[Any]) -> tuple[str, float] | None:
@@ -312,17 +405,38 @@ def detect_columns(grid: list[list[Any]], header_row: int | None) -> dict[str, C
     return mapping
 
 
-def classify_sheet(name: str, mapping: dict[str, ColumnGuess]) -> str:
-    """Open positions or closed trades."""
-    lowered = name.lower()
+def classify_sheet(name: str, mapping: dict[str, ColumnGuess],
+                   body: list[list[Any]] | None = None) -> str:
+    """Open positions or closed trades.
+
+    The sheet name decides it. Both sheet types declare the same sell columns —
+    a holdings sheet simply leaves them empty — so the presence of a sell column
+    proves nothing; only populated sell cells do.
+    """
+    lowered = name.strip().lower()
     if any(h in lowered for h in REALIZED_SHEET_HINTS):
         return "realized"
     if any(h in lowered for h in HOLDINGS_SHEET_HINTS):
         return "holdings"
-    # No name hint — presence of sell columns is the tell.
-    if {"sell_date", "sell_rate"} & set(mapping):
-        return "realized"
+
+    guess = mapping.get("sell_date")
+    if guess is not None and body:
+        filled = sum(
+            1 for row in body
+            if guess.index < len(row) and row[guess.index] is not None
+            and str(row[guess.index]).strip() != ""
+        )
+        if filled:
+            return "realized"
     return "holdings"
+
+
+def extract_financial_year(name: str) -> str | None:
+    match = re.search(r"(\d{4})\s*-\s*(\d{2,4})", name)
+    if not match:
+        return None
+    start, end = match.group(1), match.group(2)
+    return f"{start}-{end[-2:]}"
 
 
 def normalize_company_name(raw: str) -> str:
@@ -374,17 +488,30 @@ def _is_annotation(cells: list[Any]) -> bool:
 def parse_sheet(name: str, grid: list[list[Any]], *, resolver=resolve_ticker) -> SheetPreview:
     header_row = detect_header_row(grid)
     mapping = detect_columns(grid, header_row)
-    kind = classify_sheet(name, mapping)
+    start = (header_row + 1) if header_row is not None else 0
+    kind = classify_sheet(name, mapping, grid[start:])
 
     rows: list[ParsedRow] = []
     skipped: list[SkippedRow] = []
-    start = (header_row + 1) if header_row is not None else 0
+    annotations: list[Annotation] = []
 
     def cell(row: list[Any], fld: str) -> Any:
         guess = mapping.get(fld)
         if guess is None or guess.index >= len(row):
             return None
         return row[guess.index]
+
+    def read_date(row: list[Any], fld: str, repairs: list[DateRepair]):
+        raw = cell(row, fld)
+        parsed = parse_date(raw)
+        if parsed is not None:
+            return parsed
+        fixed = repair_date(raw)
+        if fixed is None:
+            return None
+        repaired, note = fixed
+        repairs.append(DateRepair(fld, str(raw).strip(), repaired, note))
+        return repaired
 
     for offset, row in enumerate(grid[start:]):
         row_number = start + offset + 1        # 1-based, matches Excel
@@ -393,8 +520,17 @@ def parse_sheet(name: str, grid: list[list[Any]], *, resolver=resolve_ticker) ->
 
         preview = " | ".join(str(c) for c in row[:6] if c is not None)[:120]
 
+        # Totals line closes the sheet; everything after it is summary.
+        joined = " ".join(str(c) for c in row if c is not None).strip().lower()
+        if any(joined.startswith(t) or f" {t}" in joined[:40] for t in TERMINATOR_TOKENS):
+            if cell(row, "description") in (None, ""):
+                break
+
+        # Bonus/split notes aren't trades, but they explain why a quantity
+        # changed — keep them visible instead of dropping them silently.
         if _is_annotation(row):
-            skipped.append(SkippedRow(row_number, "corporate action annotation", preview))
+            text = " ".join(str(c) for c in row if c is not None).strip()
+            annotations.append(Annotation(row_number, text[:160]))
             continue
 
         desc = cell(row, "description")
@@ -408,10 +544,38 @@ def parse_sheet(name: str, grid: list[list[Any]], *, resolver=resolve_ticker) ->
             skipped.append(SkippedRow(row_number, "missing quantity or rate", preview))
             continue
 
-        buy_date = parse_date(cell(row, "buy_date"))
+        repairs: list[DateRepair] = []
+        buy_date = read_date(row, "buy_date", repairs)
         if buy_date is None:
             skipped.append(SkippedRow(row_number, "unreadable buy date", preview))
             continue
+
+        # Money is authoritative. Fall back to qty x rate only when the sheet
+        # doesn't carry a value column.
+        buy_value = _to_number(cell(row, "buy_value"))
+        if buy_value is None:
+            buy_value = round(qty * rate, 2)
+
+        sell_date = read_date(row, "sell_date", repairs)
+        sell_qty = _to_number(cell(row, "sell_qty"))
+        sell_rate = _to_number(cell(row, "sell_rate"))
+        sell_value = _to_number(cell(row, "sell_value"))
+        if sell_value is None and sell_qty is not None and sell_rate is not None:
+            sell_value = round(sell_qty * sell_rate, 2)
+
+        # A realized row needs a sell date — it decides the P&L financial year.
+        if kind == "realized" and sell_value is not None and sell_date is None:
+            skipped.append(SkippedRow(row_number, "unreadable sell date", preview))
+            continue
+
+        profit_loss = (round(sell_value - buy_value, 2)
+                       if sell_value is not None else None)
+
+        action = None
+        if sell_qty is not None and qty and sell_qty != qty:
+            ratio = sell_qty / qty
+            action = (f"quantity changed {qty:g} -> {sell_qty:g} "
+                      f"({ratio:g}x) — likely bonus or split")
 
         rows.append(ParsedRow(
             row_number=row_number,
@@ -420,12 +584,21 @@ def parse_sheet(name: str, grid: list[list[Any]], *, resolver=resolve_ticker) ->
             buy_date=buy_date,
             qty=qty,
             buy_rate=rate,
-            sell_date=parse_date(cell(row, "sell_date")),
-            sell_qty=_to_number(cell(row, "sell_qty")),
-            sell_rate=_to_number(cell(row, "sell_rate")),
+            buy_value=buy_value,
+            sell_date=sell_date,
+            sell_qty=sell_qty,
+            sell_rate=sell_rate,
+            sell_value=sell_value,
+            profit_loss=profit_loss,
+            repairs=repairs,
+            corporate_action=action,
         ))
 
-    return SheetPreview(name, kind, header_row, mapping, rows, skipped)
+    return SheetPreview(
+        name=name, kind=kind, header_row=header_row, mapping=mapping,
+        rows=rows, skipped=skipped, annotations=annotations,
+        financial_year=extract_financial_year(name),
+    )
 
 
 def load_grid(ws, max_rows: int = 5000, max_cols: int = 40) -> list[list[Any]]:
@@ -452,6 +625,37 @@ def parse_workbook(data: bytes, *, resolver=resolve_ticker) -> list[SheetPreview
         return previews
     finally:
         wb.close()
+
+
+def select_import_sheets(previews: list[SheetPreview]) -> list[SheetPreview]:
+    """Mark which sheets actually import.
+
+    Holdings sheets are cumulative snapshots — each year restates every open lot,
+    so importing more than the newest duplicates the portfolio. Realized sheets
+    are the opposite: each records the trades closed in its own year and they
+    never overlap, so all of them import.
+    """
+    holdings = [p for p in previews if p.kind == "holdings"]
+
+    def sort_key(p: SheetPreview) -> tuple[int, str]:
+        fy = p.financial_year
+        return (1, fy) if fy else (0, p.name)
+
+    latest = max(holdings, key=sort_key) if holdings else None
+
+    for preview in previews:
+        if preview.kind != "holdings":
+            preview.selected = True
+            continue
+        if preview is latest:
+            preview.selected = True
+        else:
+            preview.selected = False
+            preview.skip_reason = (
+                f"superseded by {latest.name.strip()!r} — holdings sheets restate "
+                f"every open lot, so importing both would duplicate them"
+            )
+    return previews
 
 
 def derive_financial_year(d: date) -> str:
