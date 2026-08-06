@@ -91,8 +91,12 @@ TICKER_ALIASES: dict[str, str] = {
     "INDUSIND BANK": "INDUSINDBK", "INOX WIND": "INOXWIND",
     "HINDUSTAN UNILEVER": "HINDUNILVR", "DEEPAK NITRITE": "DEEPAKNTR",
     "DEEPAK NITRATE": "DEEPAKNTR", "TATA CHEMICALS": "TATACHEM",
-    "UNITED SPIRITS": "UNITDSPR", "TATA MOTORS PV": "TATAMTRDVR",
-    "TATA MOTORS CV": "TATAMTRDVR", "HCL TECH": "HCLTECH",
+    "UNITED SPIRITS": "UNITDSPR",
+    # Tata Motors demerged: passenger vehicles trade as TMPV, commercial as
+    # TMCV. Both previously pointed at TATAMTRDVR, delisted with the 2024 DVR
+    # conversion.
+    "TATA MOTORS PV": "TMPV", "TATA MOTORS CV": "TMCV",
+    "HCL TECH": "HCLTECH",
     "KPIT TECH": "KPITTECH", "HINDUSTAN COPPER": "HINDCOPPER",
     "HINDUSTAN ZINC": "HINDZINC", "RELIANCE INDUSTRIES": "RELIANCE",
     "POWER GRID": "POWERGRID", "BAJAJ CONSUMER": "BAJAJCON",
@@ -466,9 +470,14 @@ def resolve_ticker(raw: str, *, symbol_set: set[str] | None = None,
     if compact and compact in symbol_set:
         return TickerMatch("exact", compact, 1.0)
 
+    # An alias is only as good as the symbol it points at. Listings change —
+    # companies demerge, DVRs convert — so a mapping written once can rot. Check
+    # the target still exists rather than trusting it; a stale alias then
+    # surfaces for confirmation instead of failing at commit.
     for key in (cleaned, str(raw).strip().upper()):
-        if key in TICKER_ALIASES:
-            return TickerMatch("alias", TICKER_ALIASES[key], 0.95)
+        alias = TICKER_ALIASES.get(key)
+        if alias and alias in symbol_set:
+            return TickerMatch("alias", alias, 0.95)
 
     try:
         candidates = fuzzy(compact or cleaned, top_n=5) or []

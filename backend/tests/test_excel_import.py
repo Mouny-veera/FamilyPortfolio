@@ -22,6 +22,7 @@ from app.services.excel_import import (
     parse_workbook,
     resolve_ticker,
     select_import_sheets,
+    TICKER_ALIASES,
 )
 
 # Stub the symbol lookup so tests don't depend on the NSE master being loaded.
@@ -231,6 +232,44 @@ def test_totals_row_terminates_the_sheet():
     ]})
     (sheet,) = parse_workbook(data, resolver=_resolver)
     assert len(sheet.rows) == 1
+
+
+def test_stale_alias_is_not_trusted():
+    """An alias whose target no longer lists must not pass as resolved.
+
+    Listings change — the Tata Motors DVR converted and the company demerged —
+    so a mapping written once can rot. A stale alias has to come back for
+    confirmation, not sail through preview and fail at commit.
+    """
+    live = {"RELIANCE", "TMPV"}
+    # Target present: resolves.
+    ok = resolve_ticker("TATA MOTORS PV", symbol_set=live,
+                        fuzzy=lambda q, top_n=5: [])
+    assert ok.status == "alias" and ok.ticker == "TMPV"
+
+    # Target absent from the master: must not claim a match.
+    stale = resolve_ticker("TATA MOTORS PV", symbol_set={"RELIANCE"},
+                           fuzzy=lambda q, top_n=5: [{"symbol": "TMPV"}])
+    assert stale.status != "alias"
+    assert stale.ticker is None, "an unlisted symbol must not be handed to commit"
+
+
+def test_alias_table_targets_are_all_live():
+    """Guards against another mapping silently rotting.
+
+    Uses the NSE master when it's loaded; skips rather than failing when it
+    isn't, so the suite still runs standalone.
+    """
+    try:
+        from app.services.nse_master import get_nse_symbol_set
+        symbols = get_nse_symbol_set()
+    except Exception:
+        symbols = set()
+    if not symbols:
+        print("    (skipped: NSE master not loaded)")
+        return
+    stale = {k: v for k, v in TICKER_ALIASES.items() if v not in symbols}
+    assert not stale, f"alias targets no longer listed on NSE: {stale}"
 
 
 def test_financial_year_boundary():
