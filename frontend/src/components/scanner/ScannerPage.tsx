@@ -22,14 +22,13 @@ import { CSS } from "@dnd-kit/utilities"
 import { api, type ScanResult } from "@/lib/api"
 import { formatNumber } from "@/lib/utils"
 import { PageError } from "@/components/ui/PageError"
+import { bgSecondary, textMuted, textPrimary } from "@/lib/styles"
 
 /* ────────────────────────────────────────────────────────────────
    Static style constants (hoisted to avoid re-creating objects
    on every render — only for style objects with no dynamic values)
    ──────────────────────────────────────────────────────────────── */
 
-const textPrimary = { color: "var(--text-primary)" } as const
-const textMuted = { color: "var(--text-muted)" } as const
 const accentText = { color: "var(--color-accent)" } as const
 const checkIconColor = { color: "var(--bg-card)" } as const
 const dragHandle = { color: "var(--text-muted)", opacity: 0.4 } as const
@@ -42,7 +41,6 @@ const noScrollbar = { scrollbarWidth: "none" } as const
 const tabsRail = { backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" } as const
 const tablePanel = { border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" } as const
 const bgCard = { backgroundColor: "var(--bg-card)" } as const
-const bgSecondary = { backgroundColor: "var(--bg-secondary)" } as const
 const dropdownPanel = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-elevated)" } as const
 const borderBottomSubtle = { borderBottom: "1px solid var(--border-subtle)" } as const
 const stickyTabs = { position: "sticky" as const, top: 0, zIndex: 10, backgroundColor: "var(--bg-primary)", paddingBottom: "12px", paddingTop: "4px" }

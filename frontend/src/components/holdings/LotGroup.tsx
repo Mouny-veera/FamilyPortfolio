@@ -8,12 +8,10 @@ import { EditForm } from "./EditForm"
 import { SellForm } from "./SellForm"
 import { SellGroupForm } from "./SellGroupForm"
 import { DeleteConfirm } from "./DeleteConfirm"
+import { textMuted, textPrimary, textSecondary } from "@/lib/styles"
 
 const ALERT_THRESHOLD = 10
 
-const textMuted = { color: "var(--text-muted)" } as const
-const textPrimary = { color: "var(--text-primary)" } as const
-const textSecondary = { color: "var(--text-secondary)" } as const
 const colorAccent = { color: "var(--color-accent)" } as const
 const colorProfit = { color: "var(--color-profit)" } as const
 const warningBar = {

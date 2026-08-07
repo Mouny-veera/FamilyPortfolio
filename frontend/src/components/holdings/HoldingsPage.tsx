@@ -8,12 +8,8 @@ import { LotGroup } from "./LotGroup"
 import { BuyForm } from "./BuyForm"
 import { ImportDialog } from "./ImportDialog"
 import { PageError } from "@/components/ui/PageError"
+import { bgElevated, bgSecondary, textMuted, textPrimary, textSecondary } from "@/lib/styles"
 
-const textMuted = { color: "var(--text-muted)" } as const
-const textPrimary = { color: "var(--text-primary)" } as const
-const textSecondary = { color: "var(--text-secondary)" } as const
-const bgElevated = { backgroundColor: "var(--bg-elevated)" } as const
-const bgSecondary = { backgroundColor: "var(--bg-secondary)" } as const
 const bgCardBordered = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" } as const
 const cardStyle = { backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" } as const
 const borderedCardShadow = { border: "1px solid var(--border-color)", boxShadow: "var(--shadow-card)" } as const

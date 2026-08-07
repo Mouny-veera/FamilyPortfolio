@@ -23,47 +23,11 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "portfolio.db"
 EQUITY_SHEET_PREFIX = "Equity"
 PNL_SHEET_PREFIX = "P&L"
 
-TICKER_NORMALIZE = {
-    "INDUSIND BANK": "INDUSINDBK",
-    "INOX WIND": "INOXWIND",
-    "HINDUSTAN UNILEVER": "HINDUNILVR",
-    "DEEPAK NITRITE": "DEEPAKNTR",
-    "DEEPAK NITRATE": "DEEPAKNTR",
-    "TATA CHEMICALS": "TATACHEM",
-    "UNITED SPIRITS": "UNITDSPR",
-    "TATA MOTORS  PV": "TATAMTRDVR",
-    "TATA MOTORS  CV": "TATAMTRDVR",
-    "HCL TECH": "HCLTECH",
-    "KPIT TECH": "KPITTECH",
-    "HINDUSTAN COPPER": "HINDCOPPER",
-    "HINDUSTAN ZINC": "HINDZINC",
-    "RELIANCE INDUSTRIES": "RELIANCE",
-    "POWER GRID": "POWERGRID",
-    "BAJAJ CONSUMER": "BAJAJCON",
-    "ADANI POWER": "ADANIPOWER",
-    "NATCO PHARMA": "NATCOPHARM",
-    "VARUN BEVERAGES": "VBL",
-    "BAJFINANCE": "BAJFINANCE",
-    "BAJAJFINANCE": "BAJFINANCE",
-    "ZYDUS LIFESCIENCES": "ZYDUSLIFE",
-    "CAMLIN FINE SCIENCES": "CAMLINFINE",
-    "JYOTHYLAB": "JYOTHYLAB",
-    "JYOTHY LAB": "JYOTHYLAB",
-    "IDFCFIRSTB": "IDFCFIRSTB",
-    "SOUTHBANK": "SOUTHBANK",
-    "TATA GOLD": "TATAGOLD",
-    "DR REDDY": "DRREDDY",
-    "EMAMI LTD": "EMAMILTD",
-    "INOX WIND ": "INOXWIND",
-    "PI INDUSTRIES": "PIIND",
-    "APOLLO TYRES": "APOLLOTYRE",
-    "BHARAT RASAYAN": "BHARATRAS",
-    "VINATI ORGANICS": "VINATIORGA",
-    "TATA TECHNOLOGIES": "TATATECH",
-    "ARE&M": "ARE&M",
-    "HINDALCO ": "HINDALCO",
-    "GOODYEAR": "GOODYEAR",
-}
+# Company-name aliases live with the import service so the CLI and the UI can
+# never disagree. They diverged once: this file still mapped Tata Motors to
+# TATAMTRDVR after the DVR delisted, while the service had been corrected.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
+from app.services.excel_import import TICKER_ALIASES as TICKER_NORMALIZE  # noqa: E402
 
 SKIP_KEYWORDS = ["BONUS", "SPLIT", "NOW-", "NOW:-", "NOW:"]
 

@@ -15,6 +15,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 MAX_RETRIES = 2
 DELAY_BETWEEN_CALLS = 0.5
+# Rows buffered before a write. Small enough that an interrupted run loses at
+# most this many fetches, large enough to avoid a round trip per ticker.
+WRITE_BATCH_SIZE = 25
 STALE_HOURS = 24
 
 _fetch_lock = asyncio.Lock()
@@ -224,24 +227,43 @@ async def refresh_all_fundamentals() -> dict:
         fetched = 0
         errors = 0
 
+        # Buffer rows and write them in batches. Opening a session, selecting and
+        # committing once per ticker costs three round trips per name across the
+        # whole universe; batching keeps that proportional to the batch count
+        # while still checkpointing often enough that a crash loses little.
+        pending: list[dict] = []
+
+        async def flush() -> None:
+            if not pending:
+                return
+            async with async_session() as db:
+                result = await db.execute(
+                    select(StockFundamentals).where(
+                        StockFundamentals.ticker.in_([d["ticker"] for d in pending])
+                    )
+                )
+                existing_rows = {r.ticker: r for r in result.scalars().all()}
+                stamp = datetime.now(timezone.utc)
+                for data in pending:
+                    row = existing_rows.get(data["ticker"])
+                    if row:
+                        for k, v in data.items():
+                            if k != "ticker":
+                                setattr(row, k, v)
+                        row.updated_at = stamp
+                    else:
+                        db.add(StockFundamentals(**data, updated_at=stamp))
+                await db.commit()
+            pending.clear()
+
         for i, ticker in enumerate(universe):
             _fetch_status["progress"] = i + 1
             try:
                 data = await fetch_fundamentals_for_ticker(ticker)
                 if data:
-                    async with async_session() as db:
-                        existing = await db.get(StockFundamentals, ticker)
-                        if existing:
-                            for k, v in data.items():
-                                if k != "ticker":
-                                    setattr(existing, k, v)
-                            existing.updated_at = datetime.now(timezone.utc)
-                        else:
-                            db.add(StockFundamentals(
-                                **data,
-                                updated_at=datetime.now(timezone.utc),
-                            ))
-                        await db.commit()
+                    pending.append(data)
+                    if len(pending) >= WRITE_BATCH_SIZE:
+                        await flush()
                     fetched += 1
                 else:
                     errors += 1
@@ -251,6 +273,8 @@ async def refresh_all_fundamentals() -> dict:
                 logger.error("[Fundamentals] Error saving %s: %s", ticker, e)
 
             await asyncio.sleep(DELAY_BETWEEN_CALLS)
+
+        await flush()
 
         _fetch_status["running"] = False
         _fetch_status["errors"] = errors

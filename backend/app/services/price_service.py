@@ -39,12 +39,20 @@ async def refresh_prices():
     updated = 0
 
     async with async_session() as db:
+        # Load the cache rows in one query rather than one per ticker. This runs
+        # every 60s during market hours, so a per-ticker SELECT scales the poll
+        # cost with the size of the portfolio.
+        existing_result = await db.execute(
+            select(PriceCache).where(PriceCache.ticker.in_(list(prices.keys())))
+        )
+        cached = {p.ticker: p for p in existing_result.scalars().all()}
+
         for ticker, data in prices.items():
-            existing = await db.get(PriceCache, ticker)
-            if existing:
-                existing.last_price = data["last_price"]
-                existing.change_pct = data["change_pct"]
-                existing.updated_at = now
+            row = cached.get(ticker)
+            if row:
+                row.last_price = data["last_price"]
+                row.change_pct = data["change_pct"]
+                row.updated_at = now
             else:
                 db.add(PriceCache(
                     ticker=ticker,

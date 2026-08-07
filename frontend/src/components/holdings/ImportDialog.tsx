@@ -11,6 +11,7 @@ import {
   type NseSearchResult,
 } from "@/lib/api"
 import { formatCurrency, formatNumber } from "@/lib/utils"
+import { textMuted, textPrimary, textSecondary } from "@/lib/styles"
 
 interface ImportDialogProps {
   memberId: number
@@ -28,9 +29,6 @@ const panel = {
   border: "1px solid var(--border-color)",
   boxShadow: "var(--shadow-elevated)",
 } as const
-const textPrimary = { color: "var(--text-primary)" } as const
-const textMuted = { color: "var(--text-muted)" } as const
-const textSecondary = { color: "var(--text-secondary)" } as const
 const subtleCard = {
   backgroundColor: "var(--bg-elevated)",
   border: "1px solid var(--border-subtle)",
