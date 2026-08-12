@@ -47,3 +47,4 @@ yarn-debug.log*
 .claude/skills/
 .impeccable/
 exports/
+data/nifty500.json
