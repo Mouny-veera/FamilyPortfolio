@@ -27,7 +27,7 @@ async def _run_if_stale():
             logger.info("[Fundamentals] Data is stale, fetching on startup...")
             await refresh_all_fundamentals()
         else:
-            logger.warning("[Fundamentals] Data is fresh, skipping startup fetch")
+            logger.info("[Fundamentals] Data is fresh, skipping startup fetch")
     except Exception as e:
         logger.error("[Fundamentals] Startup check error: %s", e)
 

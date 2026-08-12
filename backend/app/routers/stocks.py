@@ -321,6 +321,26 @@ async def get_stock_chart(
     return payload
 
 
+def _widen_52w_range(quote: dict) -> dict:
+    """Force the 52-week range to contain today's trading.
+
+    A 52-week window includes today by definition, but providers refresh those
+    two fields on their own schedule — often a session behind. That rendered a
+    52W high *below* the current price, which reads as a bug in our app no
+    matter whose data is stale. Widening to today's extremes can only ever be
+    more correct than a range that excludes the price sitting next to it.
+    """
+    last = quote.get("last_price")
+    day_high = quote.get("high") or last
+    day_low = quote.get("low") or last
+
+    if quote.get("high_52w") is not None and day_high is not None:
+        quote["high_52w"] = round(max(quote["high_52w"], day_high), 2)
+    if quote.get("low_52w") is not None and day_low is not None:
+        quote["low_52w"] = round(min(quote["low_52w"], day_low), 2)
+    return quote
+
+
 @router.get("/{ticker}/quote")
 async def get_stock_quote(ticker: str):
     quote_limiter.check()
@@ -336,7 +356,7 @@ async def get_stock_quote(ticker: str):
             )
             if resp.get("s") == "ok" and resp.get("d"):
                 v = resp["d"][0]["v"]
-                return {
+                return _widen_52w_range({
                     "ticker": ticker,
                     "last_price": v.get("lp"),
                     "change": v.get("ch"),
@@ -348,7 +368,7 @@ async def get_stock_quote(ticker: str):
                     "volume": v.get("volume"),
                     "high_52w": v.get("high_52w") if "high_52w" in v else None,
                     "low_52w": v.get("low_52w") if "low_52w" in v else None,
-                }
+                })
         except Exception as e:
             logger.error("Fyers quote error for %s: %s", ticker, e)
 
@@ -365,7 +385,7 @@ async def get_stock_quote(ticker: str):
         prev = fi.previous_close
         change = round(price - prev, 2) if prev else None
         change_pct = round((price - prev) / prev * 100, 2) if prev else None
-        return {
+        return _widen_52w_range({
             "ticker": ticker,
             "last_price": round(price, 2),
             "change": change,
@@ -377,7 +397,7 @@ async def get_stock_quote(ticker: str):
             "volume": int(fi.last_volume) if fi.last_volume else None,
             "high_52w": round(fi.year_high, 2) if fi.year_high else None,
             "low_52w": round(fi.year_low, 2) if fi.year_low else None,
-        }
+        })
     except HTTPException:
         raise
     except Exception as e:

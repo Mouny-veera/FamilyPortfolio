@@ -352,5 +352,11 @@ async def is_data_stale() -> bool:
         if not rows or len(rows) < 100:
             return True
         newest = max(r.updated_at for r in rows if r.updated_at)
+        # updated_at is written as UTC-aware but the column is a plain DateTime,
+        # so SQLite hands it back naive. Subtracting an aware "now" from it
+        # raised every time, and the caller swallowed the error — which meant
+        # the startup staleness check never actually ran.
+        if newest.tzinfo is None:
+            newest = newest.replace(tzinfo=timezone.utc)
         hours_since = (datetime.now(timezone.utc) - newest).total_seconds() / 3600
         return hours_since > STALE_HOURS

@@ -68,8 +68,14 @@ async def refresh_prices():
 
 async def _polling_loop():
     global _consecutive_failures
+    # Always refresh once on startup, market hours or not. The cache can be
+    # arbitrarily stale — a restart after the close previously left it untouched
+    # until the next session opened, so the app showed yesterday's prices all
+    # evening with no indication. Outside trading hours this fetches the closing
+    # price, which is the correct thing to display until the next session.
+    first_pass = True
     while True:
-        if _is_market_hours():
+        if first_pass or _is_market_hours():
             try:
                 result = await refresh_prices()
                 if result.get("updated", 0) > 0:
@@ -96,6 +102,7 @@ async def _polling_loop():
                         logger.warning("Fyers token refresh failed — will retry next cycle")
                 except Exception as e:
                     logger.error("Token refresh error: %s", e)
+        first_pass = False
         await asyncio.sleep(60)
 
 
