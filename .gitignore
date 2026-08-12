@@ -46,3 +46,4 @@ yarn-debug.log*
 .claude/settings.local.json
 .claude/skills/
 .impeccable/
+exports/

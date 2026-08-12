@@ -95,6 +95,9 @@ echo "[8/8] Configuring Nginx..."
 cp "$APP_DIR/deploy/nginx.conf" /etc/nginx/sites-available/familyportfolio
 ln -sf /etc/nginx/sites-available/familyportfolio /etc/nginx/sites-enabled/familyportfolio
 rm -f /etc/nginx/sites-enabled/default
+# http-level snippet, kept separate so certbot can rewrite the site config
+# without losing it. update.sh keeps this in sync on every deploy.
+cp "$APP_DIR/deploy/nginx-upload-size.conf" /etc/nginx/conf.d/familyportfolio-upload-size.conf
 nginx -t && systemctl reload nginx
 
 # Fix permissions

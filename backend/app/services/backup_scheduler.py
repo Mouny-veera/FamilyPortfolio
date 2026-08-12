@@ -13,6 +13,10 @@ GCS_BUCKET = "gs://familyportfolio-backups"
 DB_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 DB_PATH = DB_DIR / "portfolio.db"
 BACKUP_DIR = DB_DIR / "backups"
+# Holds the Fyers credentials and allowed_emails — the Google sign-in allowlist.
+# Without it a restored database is unreachable: every holding survives but
+# nobody can log in and market data has no broker session.
+CONFIG_PATH = DB_DIR / "config.json"
 
 _scheduler_task: asyncio.Task | None = None
 
@@ -94,11 +98,37 @@ def _cleanup_local(max_local: int = 10):
         logger.info("[Backup] Removed old local backup: %s", old.name)
 
 
+def _backup_config():
+    """Mirror config.json to GCS under a fixed name.
+
+    Overwritten rather than timestamped: it is small, changes rarely, and only
+    the current one is useful — an expired Fyers token from last week restores
+    nothing. Kept out of the timestamped rotation so _cleanup_gcs never prunes
+    it.
+    """
+    if not CONFIG_PATH.exists():
+        return
+    try:
+        result = subprocess.run(
+            ["gsutil", "cp", str(CONFIG_PATH), f"{GCS_BUCKET}/config.json"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            logger.info("[Backup] Uploaded config.json to GCS")
+        else:
+            logger.error("[Backup] config.json upload failed: %s", result.stderr.strip())
+    except FileNotFoundError:
+        logger.warning("[Backup] gsutil not found — skipping config.json upload")
+    except Exception as e:
+        logger.error("[Backup] config.json upload error: %s", e)
+
+
 def run_backup_cycle():
     dest = _local_backup()
     if not dest:
         return
     _upload_to_gcs(dest)
+    _backup_config()
     _cleanup_local()
     _cleanup_gcs()
 
